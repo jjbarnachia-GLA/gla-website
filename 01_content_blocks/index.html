@@ -1,0 +1,1812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Golf Lie Analyzer | AI Caddie for Every Golfer</title>
+  <meta name="description" content="The first AI caddie that reads your lie. Computer vision analyzes turf conditions, physics engine models the shot, and you get expert advice — tailored to your game." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #050a0e;
+      --bg2:       #080e14;
+      --bg3:       #0c1620;
+      --panel:     #0a1420;
+      --border:    #162636;
+      --border-hi: #1c3850;
+      --accent:    #00c8ff;
+      --accent2:   #00ff9d;
+      --accent3:   #ff6b35;
+      --text:      #b8cdd8;
+      --text-dim:  #3e5870;
+      --text-hi:   #e4f2ff;
+      --mono: 'IBM Plex Mono', monospace;
+      --display: 'Orbitron', monospace;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 14px;
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+    /* scanline */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,200,255,0.006) 3px, rgba(0,200,255,0.006) 4px);
+      pointer-events: none; z-index: 9999;
+    }
+
+    /* ── UTILS ── */
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+    .accent  { color: var(--accent); }
+    .accent2 { color: var(--accent2); }
+    .accent3 { color: var(--accent3); }
+    .dim     { color: var(--text-dim); }
+    .section-label {
+      font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
+      color: var(--accent); display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
+    }
+    .section-label::before { content: '//'; color: var(--text-dim); }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(5,10,14,0.95);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 0;
+    }
+    .nav-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      max-width: 1100px; margin: 0 auto; padding: 0 24px;
+    }
+    .nav-logo {
+      font-family: var(--display); font-size: 12px; font-weight: 700;
+      letter-spacing: 0.22em; color: var(--accent); text-decoration: none;
+    }
+    .nav-logo span { color: var(--text-dim); }
+    .nav-links { display: flex; gap: 28px; list-style: none; }
+    .nav-links a {
+      font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--text-dim); text-decoration: none; transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--accent); }
+    .nav-cta {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em;
+      text-transform: uppercase; color: var(--accent); border: 1px solid var(--accent);
+      padding: 7px 18px; text-decoration: none; transition: all 0.2s; white-space: nowrap;
+    }
+    .nav-cta:hover { background: rgba(0,200,255,0.08); box-shadow: 0 0 14px rgba(0,200,255,0.2); }
+    .hamburger {
+      display: none; flex-direction: column; gap: 5px;
+      cursor: pointer; background: none; border: none; padding: 4px;
+    }
+    .hamburger span { display: block; width: 22px; height: 2px; background: var(--accent); transition: all 0.3s; }
+    .mobile-menu {
+      display: none; position: fixed; top: 56px; left: 0; right: 0; bottom: 0;
+      background: var(--bg2); z-index: 99; flex-direction: column;
+      align-items: center; justify-content: center; gap: 32px;
+    }
+    .mobile-menu.open { display: flex; }
+    .mobile-menu a {
+      font-size: 14px; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--text); text-decoration: none; transition: color 0.2s;
+    }
+    .mobile-menu a:hover { color: var(--accent); }
+
+    /* ── HERO ── */
+    #hero {
+      min-height: 94vh; display: flex; align-items: center;
+      position: relative; overflow: hidden; padding: 90px 0 60px;
+    }
+    #hero::before {
+      content: ''; position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(0,200,255,0.032) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,200,255,0.032) 1px, transparent 1px);
+      background-size: 56px 56px;
+    }
+    #hero::after {
+      content: ''; position: absolute; top: -100px; right: -100px;
+      width: 700px; height: 700px;
+      background: radial-gradient(circle, rgba(0,200,255,0.055) 0%, transparent 65%);
+      pointer-events: none;
+    }
+    .hero-inner {
+      position: relative; z-index: 2;
+      display: grid; grid-template-columns: 1fr 340px; gap: 60px; align-items: center;
+    }
+    .hero-eyebrow {
+      font-size: 10px; letter-spacing: 0.22em; color: var(--accent);
+      margin-bottom: 18px; display: flex; align-items: center; gap: 10px;
+    }
+    .hero-eyebrow::before { content: ''; display: block; width: 20px; height: 1px; background: var(--accent); }
+    h1 {
+      font-family: var(--display);
+      font-size: clamp(28px, 4.2vw, 50px);
+      font-weight: 900; line-height: 1.06; letter-spacing: 0.02em;
+      color: var(--text-hi); margin-bottom: 22px;
+    }
+    h1 .hl { color: var(--accent); display: block; }
+    .hero-sub { font-size: 14px; line-height: 1.9; color: var(--text); max-width: 480px; margin-bottom: 34px; }
+    .hero-sub strong { color: var(--text-hi); font-weight: 500; }
+    .hero-btns { display: flex; gap: 14px; flex-wrap: wrap; }
+    .btn-primary {
+      font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--bg); background: var(--accent); padding: 13px 28px;
+      text-decoration: none; font-weight: 600; transition: all 0.25s; border: 1px solid var(--accent);
+    }
+    .btn-primary:hover { background: transparent; color: var(--accent); box-shadow: 0 0 24px rgba(0,200,255,0.3); }
+    .btn-ghost {
+      font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--text-dim); border: 1px solid var(--border); padding: 13px 28px;
+      text-decoration: none; transition: all 0.25s;
+    }
+    .btn-ghost:hover { color: var(--text); border-color: var(--text-dim); }
+
+    /* HERO PANEL */
+    .hero-panel {
+      background: var(--panel); border: 1px solid var(--border);
+      padding: 24px; position: relative;
+    }
+    .hero-panel::before {
+      content: 'INFERENCE_ACTIVE'; position: absolute; top: -9px; left: 16px;
+      background: var(--bg); padding: 0 8px; font-size: 9px; letter-spacing: 0.18em; color: var(--accent);
+    }
+    .panel-row {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 11px;
+    }
+    .panel-row:last-child { border-bottom: none; }
+    .panel-key { color: var(--text-dim); }
+    .panel-val { color: var(--text-hi); text-align: right; }
+    .panel-val.green { color: var(--accent2); }
+    .panel-val.orange { color: var(--accent3); }
+    .panel-val.blue { color: var(--accent); }
+    .confidence-bar {
+      width: 100%; height: 3px; background: var(--border); margin-top: 6px;
+      position: relative; overflow: hidden;
+    }
+    .confidence-fill {
+      height: 100%; background: var(--accent2); width: 82%;
+      animation: pulse-bar 2.5s ease-in-out infinite;
+    }
+    @keyframes pulse-bar { 0%,100%{opacity:1} 50%{opacity:0.6} }
+    .blink { animation: blink 1.2s step-end infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    /* ── SECTION BASE ── */
+    section { padding: 90px 0; }
+    .section-head { margin-bottom: 56px; }
+    .section-head h2 {
+      font-family: var(--display); font-size: clamp(20px, 3vw, 32px);
+      font-weight: 700; letter-spacing: 0.06em; color: var(--text-hi); margin-bottom: 14px;
+    }
+    .section-head p { font-size: 14px; color: var(--text); max-width: 580px; line-height: 1.85; }
+
+    /* ── CADDIE STRIP (what makes it different) ── */
+    #caddie {
+      background: linear-gradient(135deg, var(--bg2) 0%, rgba(0,200,255,0.03) 100%);
+      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      padding: 60px 0;
+    }
+    .caddie-inner {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center;
+    }
+    .caddie-text h2 {
+      font-family: var(--display); font-size: clamp(22px, 3vw, 36px);
+      font-weight: 900; line-height: 1.1; color: var(--text-hi); margin-bottom: 18px;
+    }
+    .caddie-text h2 em { color: var(--accent2); font-style: normal; }
+    .caddie-text p { font-size: 14px; line-height: 1.9; color: var(--text); margin-bottom: 14px; }
+    .caddie-text p strong { color: var(--text-hi); font-weight: 500; }
+    .caddie-compare { display: flex; flex-direction: column; gap: 12px; }
+    .compare-row {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 1px;
+      font-size: 11px; background: var(--border);
+    }
+    .compare-cell {
+      padding: 12px 14px; font-size: 11px; line-height: 1.5;
+    }
+    .compare-cell.head {
+      font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase;
+      padding: 8px 14px;
+    }
+    .compare-cell.them {
+      background: var(--bg2); color: var(--text-dim);
+    }
+    .compare-cell.them.head { color: var(--text-dim); }
+    .compare-cell.us {
+      background: rgba(0,200,255,0.05); color: var(--text);
+    }
+    .compare-cell.us.head { color: var(--accent); }
+    .compare-cell.us .check { color: var(--accent2); margin-right: 6px; }
+
+    /* ── CAPABILITIES ── */
+    #capabilities { background: var(--bg2); border-top: 1px solid var(--border); }
+    .caps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border); }
+    .cap-card {
+      background: var(--panel); padding: 32px 28px; position: relative; overflow: hidden;
+    }
+    .cap-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: var(--accent); opacity: 0.4;
+    }
+    .cap-num {
+      font-family: var(--display); font-size: 28px; font-weight: 900;
+      color: rgba(0,200,255,0.12); position: absolute; top: 16px; right: 20px;
+      letter-spacing: -0.02em;
+    }
+    .cap-icon { font-size: 20px; margin-bottom: 16px; }
+    .cap-card h3 {
+      font-family: var(--display); font-size: 11px; font-weight: 700;
+      letter-spacing: 0.16em; color: var(--accent); margin-bottom: 10px;
+    }
+    .cap-card p { font-size: 12px; line-height: 1.8; color: var(--text); }
+
+    /* ── ADVICE ENGINE ── */
+    #advice {
+      border-top: 1px solid var(--border);
+    }
+    .advice-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: start; }
+    .advice-table { border: 1px solid var(--border); overflow: hidden; }
+    .advice-table-header {
+      display: grid; grid-template-columns: 1.4fr 1fr 0.8fr;
+      background: var(--bg3); border-bottom: 1px solid var(--border-hi);
+      font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase;
+    }
+    .advice-table-header span { padding: 10px 14px; color: var(--text-dim); }
+    .advice-table-header span:not(:last-child) { border-right: 1px solid var(--border); }
+    .advice-row {
+      display: grid; grid-template-columns: 1.4fr 1fr 0.8fr;
+      border-bottom: 1px solid var(--border); transition: background 0.2s;
+    }
+    .advice-row:last-child { border-bottom: none; }
+    .advice-row:hover { background: rgba(0,200,255,0.03); }
+    .advice-cell { padding: 12px 14px; font-size: 11px; line-height: 1.5; }
+    .advice-cell:not(:last-child) { border-right: 1px solid var(--border); }
+    .advice-cell .input-name { color: var(--text-hi); font-weight: 500; display: block; margin-bottom: 2px; }
+    .advice-cell .input-sub { color: var(--text-dim); font-size: 10px; }
+    .advice-cell .source-tag {
+      display: inline-block; font-size: 9px; letter-spacing: 0.1em; padding: 2px 7px;
+      border: 1px solid; text-transform: uppercase;
+    }
+    .source-tag.ai { color: var(--accent); border-color: rgba(0,200,255,0.3); background: rgba(0,200,255,0.05); }
+    .source-tag.user { color: var(--accent2); border-color: rgba(0,255,157,0.3); background: rgba(0,255,157,0.05); }
+    .source-tag.derived { color: var(--accent3); border-color: rgba(255,107,53,0.3); background: rgba(255,107,53,0.05); }
+    .source-tag.optional { color: var(--text-dim); border-color: var(--border); }
+    .advice-cell .req-yes { color: var(--accent2); font-size: 10px; }
+    .advice-cell .req-opt { color: var(--text-dim); font-size: 10px; }
+
+    .advice-callout {
+      background: var(--panel); border: 1px solid var(--border); padding: 28px;
+      position: relative; margin-bottom: 24px;
+    }
+    .advice-callout::before {
+      content: 'HOW_IT_THINKS'; position: absolute; top: -9px; left: 16px;
+      background: var(--bg); padding: 0 8px; font-size: 9px; letter-spacing: 0.18em; color: var(--accent);
+    }
+    .advice-callout p { font-size: 13px; line-height: 1.9; color: var(--text); margin-bottom: 12px; }
+    .advice-callout p:last-child { margin-bottom: 0; }
+    .advice-callout strong { color: var(--text-hi); font-weight: 500; }
+    .advice-callout em { color: var(--accent); font-style: normal; }
+
+    /* skill tier cards */
+    .tier-cards { display: flex; flex-direction: column; gap: 10px; }
+    .tier-card {
+      border: 1px solid var(--border); padding: 14px 18px;
+      display: flex; gap: 16px; align-items: flex-start; transition: border-color 0.2s;
+    }
+    .tier-card:hover { border-color: var(--border-hi); }
+    .tier-dot {
+      width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; flex-shrink: 0;
+    }
+    .tier-dot.beginner { background: var(--accent3); }
+    .tier-dot.mid      { background: var(--accent); }
+    .tier-dot.low      { background: var(--accent2); }
+    .tier-label {
+      font-family: var(--display); font-size: 9px; letter-spacing: 0.16em;
+      text-transform: uppercase; margin-bottom: 4px;
+    }
+    .tier-label.beginner { color: var(--accent3); }
+    .tier-label.mid      { color: var(--accent); }
+    .tier-label.low      { color: var(--accent2); }
+    .tier-desc { font-size: 11px; line-height: 1.7; color: var(--text); }
+
+    /* ── FOUNDER ── */
+    #mission { background: var(--bg2); border-top: 1px solid var(--border); }
+    .founder-layout { display: grid; grid-template-columns: 280px 1fr; gap: 60px; align-items: start; }
+    .founder-img-wrap {
+      position: relative;
+    }
+    .founder-img-wrap img {
+      width: 100%; display: block; filter: grayscale(20%) contrast(1.05);
+      border: 1px solid var(--border);
+    }
+    .founder-img-wrap::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(to bottom, transparent 60%, rgba(0,200,255,0.06));
+      pointer-events: none;
+    }
+    .founder-badge {
+      display: inline-flex; gap: 10px; flex-wrap: wrap; margin-bottom: 22px;
+    }
+    .badge {
+      font-size: 9px; letter-spacing: 0.16em; padding: 4px 10px; text-transform: uppercase;
+      border: 1px solid var(--border-hi); color: var(--text-dim);
+    }
+    .founder-quote {
+      border-left: 2px solid var(--accent); padding-left: 20px; margin: 24px 0;
+    }
+    .founder-quote p {
+      font-size: 14px; line-height: 1.9; color: var(--text);
+      font-style: italic;
+    }
+    .founder-body p { font-size: 13px; line-height: 1.9; color: var(--text); margin-bottom: 12px; }
+    .founder-body p strong { color: var(--text-hi); font-weight: 500; }
+
+    /* ── SPECS ── */
+    #specs { border-top: 1px solid var(--border); }
+    .specs-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--border); }
+    .spec-block { background: var(--panel); padding: 28px; }
+    .spec-block h4 {
+      font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase;
+      color: var(--text-dim); margin-bottom: 14px; padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .spec-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 11px; border-bottom: 1px solid rgba(22,38,54,0.6); }
+    .spec-row:last-child { border-bottom: none; }
+    .spec-row .sk { color: var(--text-dim); }
+    .spec-row .sv { color: var(--text-hi); }
+    .spec-row .sv.hi { color: var(--accent2); }
+
+    /* ── BETA CTA ── */
+    #beta {
+      border-top: 1px solid var(--border);
+      background: linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%);
+    }
+    .beta-wrap { max-width: 680px; margin: 0 auto; text-align: center; }
+    .beta-wrap h2 {
+      font-family: var(--display); font-size: clamp(22px, 3.5vw, 38px);
+      font-weight: 900; color: var(--text-hi); margin-bottom: 16px; line-height: 1.1;
+    }
+    .beta-wrap h2 span { color: var(--accent); }
+    .beta-wrap p { font-size: 13px; color: var(--text); line-height: 1.9; margin-bottom: 36px; }
+    .waitlist-form {
+      display: flex; gap: 0; max-width: 480px; margin: 0 auto 24px;
+    }
+    .waitlist-form input[type="email"] {
+      flex: 1; background: var(--panel); border: 1px solid var(--border-hi);
+      border-right: none; padding: 13px 16px; font-family: var(--mono); font-size: 12px;
+      color: var(--text-hi); outline: none; transition: border-color 0.2s;
+    }
+    .waitlist-form input[type="email"]::placeholder { color: var(--text-dim); }
+    .waitlist-form input[type="email"]:focus { border-color: var(--accent); }
+    .waitlist-form button {
+      background: var(--accent); color: var(--bg); border: 1px solid var(--accent);
+      padding: 13px 22px; font-family: var(--mono); font-size: 11px;
+      letter-spacing: 0.16em; text-transform: uppercase; cursor: pointer;
+      font-weight: 600; transition: all 0.2s; white-space: nowrap;
+    }
+    .waitlist-form button:hover { background: transparent; color: var(--accent); }
+    .beta-sub {
+      font-size: 10px; letter-spacing: 0.1em; color: var(--text-dim);
+    }
+
+    /* DATA PRIVACY */
+    .privacy-strip {
+      margin-top: 40px; border: 1px solid var(--border);
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border);
+    }
+    .privacy-cell {
+      background: var(--panel); padding: 16px 20px;
+    }
+    .privacy-cell h5 {
+      font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--accent); margin-bottom: 6px;
+    }
+    .privacy-cell p { font-size: 11px; color: var(--text-dim); line-height: 1.6; }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border); padding: 30px 0;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .footer-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      max-width: 1100px; margin: 0 auto; padding: 0 24px; width: 100%;
+    }
+    .footer-logo { font-family: var(--display); font-size: 11px; letter-spacing: 0.2em; color: var(--text-dim); }
+    .footer-copy { font-size: 10px; color: var(--text-dim); }
+
+    /* ── MOBILE ── */
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .nav-cta.desktop { display: none; }
+      .hamburger { display: flex; }
+
+      .hero-inner { grid-template-columns: 1fr; gap: 40px; }
+      .hero-panel { display: none; }
+
+      .caddie-inner { grid-template-columns: 1fr; gap: 40px; }
+      .compare-row { grid-template-columns: 1fr 1fr; }
+
+      .caps-grid { grid-template-columns: 1fr; }
+
+      .advice-layout { grid-template-columns: 1fr; gap: 36px; }
+      .advice-table-header { grid-template-columns: 1.2fr 1fr 0.7fr; }
+      .advice-row { grid-template-columns: 1.2fr 1fr 0.7fr; }
+
+      .founder-layout { grid-template-columns: 1fr; }
+      .founder-img-wrap { max-width: 220px; }
+
+      .specs-grid { grid-template-columns: 1fr; }
+
+      .waitlist-form { flex-direction: column; }
+      .waitlist-form input[type="email"] { border-right: 1px solid var(--border-hi); border-bottom: none; }
+      .waitlist-form button { border-top: none; }
+
+      .privacy-strip { grid-template-columns: 1fr 1fr; }
+
+      .footer-inner { flex-direction: column; gap: 10px; text-align: center; }
+    }
+
+    /* ── FLYWHEEL ── */
+    .flywheel-inner {
+      display: grid; grid-template-columns: 1fr 320px; gap: 64px; align-items: center;
+    }
+    .flywheel-loop {
+      display: flex; flex-direction: column; align-items: center; gap: 0;
+    }
+    .loop-node {
+      width: 100%; border: 1px solid var(--border); background: var(--panel);
+      padding: 14px 18px; position: relative;
+    }
+    .loop-node.accent-node  { border-color: rgba(0,200,255,0.35); background: rgba(0,200,255,0.04); }
+    .loop-node.accent2-node { border-color: rgba(0,255,157,0.35); background: rgba(0,255,157,0.04); }
+    .loop-num {
+      font-family: var(--display); font-size: 9px; letter-spacing: 0.2em;
+      color: var(--text-dim); margin-bottom: 4px;
+    }
+    .loop-title {
+      font-family: var(--display); font-size: 10px; font-weight: 700;
+      letter-spacing: 0.12em; color: var(--text-hi); margin-bottom: 3px;
+    }
+    .loop-node.accent-node  .loop-title { color: var(--accent); }
+    .loop-node.accent2-node .loop-title { color: var(--accent2); }
+    .loop-sub { font-size: 10px; color: var(--text-dim); line-height: 1.4; }
+    .loop-arrow {
+      font-size: 16px; color: var(--border-hi); line-height: 1;
+      padding: 4px 0; user-select: none;
+    }
+
+    @media (max-width: 768px) {
+      .flywheel-inner { grid-template-columns: 1fr; gap: 40px; }
+      .flywheel-loop  { max-width: 380px; margin: 0 auto; width: 100%; }
+      .privacy-strip  { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 480px) {
+      .privacy-strip { grid-template-columns: 1fr; }
+    }
+
+    /* ── UNEVEN LIES ── */
+    .uneven-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1px;
+      background: var(--border);
+      margin-bottom: 1px;
+    }
+    .uneven-card {
+      background: var(--panel);
+      padding: 28px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .uneven-head { display: flex; flex-direction: column; gap: 6px; }
+    .uneven-tag {
+      font-family: var(--display);
+      font-size: 11px; font-weight: 700; letter-spacing: 0.16em;
+      padding: 4px 12px; border: 1px solid; display: inline-block; width: fit-content;
+    }
+    .uneven-subtitle { font-size: 11px; color: var(--text-dim); letter-spacing: 0.04em; }
+
+    /* slope weight bar */
+    .uneven-weight-wrap { display: flex; flex-direction: column; gap: 6px; }
+    .slope-bar-label { font-size: 9px; letter-spacing: 0.16em; color: var(--text-dim); text-transform: uppercase; }
+    .slope-bar {
+      display: flex; height: 36px; border: 1px solid var(--border-hi); overflow: hidden;
+    }
+    .slope-seg {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 2px; transition: width 0.4s ease;
+    }
+    .slope-seg.back-heavy  { background: rgba(0,255,157,0.12); border-right: 1px solid var(--border-hi); }
+    .slope-seg.front-light { background: rgba(255,255,255,0.03); }
+    .slope-seg.front-heavy { background: rgba(255,107,53,0.14); border-right: 1px solid var(--border-hi); }
+    .slope-seg.back-light  { background: rgba(255,255,255,0.03); }
+    .slope-seg.neutral-l   { background: rgba(0,200,255,0.1); border-right: 1px solid var(--border-hi); }
+    .slope-seg.neutral-r   { background: rgba(0,200,255,0.05); }
+    .slope-pct  { font-size: 12px; font-weight: 500; color: var(--text-hi); line-height: 1; }
+    .slope-foot { font-size: 8px; letter-spacing: 0.14em; color: var(--text-dim); line-height: 1; }
+    .slope-note { font-size: 10px; color: var(--text-dim); font-style: italic; line-height: 1.5; }
+
+    /* spec grid inside each card */
+    .uneven-specs { display: flex; flex-direction: column; gap: 1px; background: var(--border); }
+    .uspec-row {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 1px; background: var(--border);
+    }
+    .uspec-block {
+      background: var(--bg2); padding: 10px 12px;
+      display: flex; flex-direction: column; gap: 3px;
+    }
+    .uspec-full { grid-column: 1 / -1; }
+    .uspec-label {
+      font-size: 8px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-dim);
+    }
+    .uspec-val { font-size: 11px; color: var(--text); line-height: 1.5; }
+
+    /* flight shape row */
+    .uspec-flight {
+      background: var(--bg3); padding: 12px 12px; display: flex;
+      flex-direction: column; gap: 6px;
+    }
+    .flight-pill {
+      display: inline-block; font-family: var(--display); font-size: 10px;
+      font-weight: 700; letter-spacing: 0.14em; padding: 4px 12px;
+      border: 1px solid; width: fit-content;
+    }
+    .flight-pill.draw { color: var(--accent2); border-color: rgba(0,255,157,0.4); background: rgba(0,255,157,0.06); }
+    .flight-pill.fade { color: var(--accent3); border-color: rgba(255,107,53,0.4); background: rgba(255,107,53,0.06); }
+    .flight-why { font-size: 10px; color: var(--text-dim); line-height: 1.6; }
+
+    /* quick ref cheat strip */
+    .slope-cheatstrip {
+      border: 1px solid var(--border-hi);
+      background: var(--bg3);
+      padding: 20px 24px;
+      margin-top: 0;
+    }
+    .cheat-head {
+      font-size: 9px; letter-spacing: 0.2em; color: var(--accent); text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+    .cheat-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 1px; background: var(--border); margin-bottom: 14px;
+    }
+    .cheat-cell {
+      background: var(--panel); padding: 12px 14px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .cheat-lie { font-size: 10px; color: var(--text-dim); letter-spacing: 0.06em; }
+    .cheat-aim { font-size: 11px; color: var(--text); }
+    .aim-right { color: var(--accent2); font-weight: 500; }
+    .aim-left  { color: var(--accent3); font-weight: 500; }
+    .cheat-shape { font-family: var(--display); font-size: 10px; font-weight: 700; letter-spacing: 0.12em; }
+    .draw-shape { color: var(--accent2); }
+    .fade-shape { color: var(--accent3); }
+    .cheat-footnote {
+      font-size: 10px; color: var(--text-dim); line-height: 1.7;
+      border-top: 1px solid var(--border); padding-top: 12px;
+    }
+
+    @media (max-width: 768px) {
+      .uneven-grid { grid-template-columns: 1fr; }
+      .cheat-grid  { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* ── LIE MATRIX ── */
+    .lie-matrix-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border);
+    }
+    .lie-card {
+      background: var(--panel);
+      padding: 20px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: background 0.2s;
+    }
+    .lie-card:hover { background: var(--bg3); }
+    .lie-card-head {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .lie-name {
+      font-family: var(--display);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      color: var(--text-hi);
+    }
+    .lie-badge {
+      font-size: 8px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border: 1px solid;
+      display: inline-block;
+      width: fit-content;
+    }
+    .lie-badge.neutral { color: var(--accent); border-color: rgba(0,200,255,0.3); background: rgba(0,200,255,0.06); }
+    .lie-badge.forward { color: var(--accent2); border-color: rgba(0,255,157,0.3); background: rgba(0,255,157,0.06); }
+    .lie-badge.heavy   { color: var(--accent3); border-color: rgba(255,107,53,0.3); background: rgba(255,107,53,0.06); }
+    .lie-badge.caution { color: #ffc800; border-color: rgba(255,200,0,0.3); background: rgba(255,200,0,0.06); }
+
+    /* weight bar */
+    .lie-weight-bar {
+      display: flex;
+      height: 28px;
+      border: 1px solid var(--border-hi);
+      overflow: hidden;
+      position: relative;
+    }
+    .bar-segment {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1px;
+      transition: width 0.4s ease;
+    }
+    .bar-segment.front { background: rgba(0,200,255,0.15); border-right: 1px solid var(--border-hi); }
+    .bar-segment.back  { background: rgba(255,255,255,0.04); }
+    .bar-pct   { font-size: 9px; font-weight: 500; color: var(--text-hi); line-height: 1; }
+    .bar-label { font-size: 7px; letter-spacing: 0.12em; color: var(--text-dim); line-height: 1; }
+    .bar-divider { width: 1px; background: var(--border-hi); flex-shrink: 0; }
+
+    /* lie detail rows */
+    .lie-detail { display: flex; flex-direction: column; gap: 5px; }
+    .lie-detail-row { display: flex; flex-direction: column; gap: 1px; }
+    .lie-detail-row .dk { font-size: 9px; letter-spacing: 0.1em; color: var(--text-dim); text-transform: uppercase; }
+    .lie-detail-row .dv { font-size: 11px; color: var(--text); line-height: 1.4; }
+
+    @media (max-width: 900px) {
+      .lie-matrix-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 480px) {
+      section { padding: 60px 0; }
+      .advice-table-header { grid-template-columns: 1.4fr 0.8fr; }
+      .advice-row { grid-template-columns: 1.4fr 0.8fr; }
+      .advice-table-header span:last-child,
+      .advice-row .advice-cell:last-child { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     NAV
+══════════════════════════════════════════ -->
+<nav>
+  <div class="nav-inner">
+    <a href="#" class="nav-logo">GLA<span>_NEURAL</span></a>
+    <ul class="nav-links">
+      <li><a href="#caddie">WHAT_IT_DOES</a></li>
+      <li><a href="#capabilities">ARCHITECTURE</a></li>
+      <li><a href="#advice">ADVICE_ENGINE</a></li>
+      <li><a href="#lie-matrix">LIE_MATRIX</a></li>
+      <li><a href="#uneven-lies">SLOPE_LIES</a></li>
+      <li><a href="#mission">FOUNDER</a></li>
+      <li><a href="#specs">SPECS</a></li>
+    </ul>
+    <a href="#beta" class="nav-cta desktop">[ ACCESS_BETA ]</a>
+    <button class="hamburger" onclick="toggleMenu()" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- mobile menu -->
+<div class="mobile-menu" id="mobile-menu">
+  <a href="#caddie" onclick="closeMenu()">WHAT_IT_DOES</a>
+  <a href="#capabilities" onclick="closeMenu()">ARCHITECTURE</a>
+  <a href="#advice" onclick="closeMenu()">ADVICE_ENGINE</a>
+  <a href="#lie-matrix" onclick="closeMenu()">LIE_MATRIX</a>
+  <a href="#uneven-lies" onclick="closeMenu()">SLOPE_LIES</a>
+  <a href="#mission" onclick="closeMenu()">FOUNDER</a>
+  <a href="#specs" onclick="closeMenu()">SPECS</a>
+  <a href="#beta" class="nav-cta" onclick="closeMenu()">[ ACCESS_BETA ]</a>
+</div>
+
+<!-- ══════════════════════════════════════════
+     HERO
+══════════════════════════════════════════ -->
+<section id="hero">
+  <div class="container">
+    <div class="hero-inner">
+      <div class="hero-content">
+        <div class="hero-eyebrow">NEURAL_NETWORK_ACTIVE // V1.0</div>
+        <h1>
+          THE CADDIE<br>
+          <span class="hl">IN YOUR POCKET.</span>
+        </h1>
+        <p class="hero-sub">
+          Every golfer has stood over a bad lie and <strong>guessed</strong>.<br>
+          GLA ends the guesswork. Point. Analyze. Execute.<br><br>
+          Computer vision reads your lie. A physics engine models the shot.
+          And you get <strong>caddie-grade advice</strong> — adapted to your skill level,
+          your distance, and the conditions in front of you.
+        </p>
+        <div class="hero-btns">
+          <a href="#beta" class="btn-primary">REQUEST_BETA_ACCESS</a>
+          <a href="#advice" class="btn-ghost">SEE_HOW_IT_WORKS</a>
+        </div>
+      </div>
+
+      <!-- live status panel -->
+      <div class="hero-panel">
+        <div class="panel-row">
+          <span class="panel-key">MODEL</span>
+          <span class="panel-val blue">MobileNetV3Small</span>
+        </div>
+        <div class="panel-row">
+          <span class="panel-key">LIE_CLASSES</span>
+          <span class="panel-val">12 types</span>
+        </div>
+        <div class="panel-row">
+          <span class="panel-key">INFERENCE</span>
+          <span class="panel-val">Server-side / GCP</span>
+        </div>
+        <div class="panel-row">
+          <span class="panel-key">LAST_LIE_DETECTED</span>
+          <span class="panel-val orange">Deep_Rough_L2</span>
+        </div>
+        <div class="panel-row">
+          <span class="panel-key">CONFIDENCE</span>
+          <span class="panel-val green">82.4%</span>
+        </div>
+        <div class="confidence-bar"><div class="confidence-fill"></div></div>
+        <div class="panel-row" style="margin-top:12px;">
+          <span class="panel-key">ADVICE_READY</span>
+          <span class="panel-val green">YES <span class="blink">█</span></span>
+        </div>
+        <div class="panel-row">
+          <span class="panel-key">PLAYER_TIER</span>
+          <span class="panel-val">MID_HANDICAP</span>
+        </div>
+        <div class="panel-row">
+          <span class="panel-key">DISTANCE_TO_PIN</span>
+          <span class="panel-val">148 yds</span>
+        </div>
+        <div class="panel-row">
+          <span class="panel-key">REC_CLUB</span>
+          <span class="panel-val blue">6-IRON / PUNCH</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     WHAT MAKES IT DIFFERENT (CADDIE STRIP)
+══════════════════════════════════════════ -->
+<section id="caddie">
+  <div class="container">
+    <div class="caddie-inner">
+      <div class="caddie-text">
+        <div class="section-label">COMPETITIVE_ADVANTAGE</div>
+        <h2>Every app measures<br>distance.<br><em>None read the lie.</em></h2>
+        <p>
+          GPS yardage. Shot tracking. Swing analytics. The golf app market is saturated
+          with tools that measure everything <strong>except the shot in front of you</strong>.
+        </p>
+        <p>
+          The lie is the variable every golfer deals with on every shot off the fairway —
+          and every golfer has been solving it with instinct alone. Until now.
+        </p>
+        <p>
+          GLA layers <strong>lie intelligence</strong> on top of the inputs other apps already handle:
+          distance, wind, club selection. The result is the complete picture —
+          the one a real caddie gives you at the bag.
+        </p>
+        <p>
+          And it doesn't matter if you're a 28 handicapper learning how to escape a buried
+          lie, or a scratch player fine-tuning carry distance from a tight fairway divot.
+          <strong>GLA calibrates its advice to you.</strong>
+        </p>
+      </div>
+
+      <div>
+        <div class="section-label" style="margin-bottom:16px;">GLA_VS_THE_FIELD</div>
+        <div class="caddie-compare">
+          <div class="compare-row">
+            <div class="compare-cell them head">Other Golf Apps</div>
+            <div class="compare-cell us head">GLA</div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-cell them">GPS distance ✓</div>
+            <div class="compare-cell us"><span class="check">✓</span>Distance to pin</div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-cell them">Shot tracking ✓</div>
+            <div class="compare-cell us"><span class="check">✓</span>Club recommendation</div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-cell them">Wind data ✓</div>
+            <div class="compare-cell us"><span class="check">✓</span>Wind-adjusted advice</div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-cell them" style="color:var(--text-dim); font-style:italic;">Lie condition — ✗</div>
+            <div class="compare-cell us"><span class="check">✓</span>CV lie detection (12 classes)</div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-cell them" style="color:var(--text-dim); font-style:italic;">Lie severity — ✗</div>
+            <div class="compare-cell us"><span class="check">✓</span>Severity scoring</div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-cell them" style="color:var(--text-dim); font-style:italic;">Technique guidance — ✗</div>
+            <div class="compare-cell us"><span class="check">✓</span>Skill-adaptive advice</div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-cell them" style="color:var(--text-dim); font-style:italic;">Physics modeling — ✗</div>
+            <div class="compare-cell us"><span class="check">✓</span>Launch + spin engine</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     CAPABILITIES
+══════════════════════════════════════════ -->
+<section id="capabilities">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-label">SYSTEM_ARCHITECTURE</div>
+      <h2>PRECISION ENGINEERING</h2>
+      <p>Three systems working in sequence to turn a difficult lie into a confident, executable plan.</p>
+    </div>
+    <div class="caps-grid">
+      <div class="cap-card">
+        <div class="cap-num">01</div>
+        <div class="cap-icon">◈</div>
+        <h3>COMPUTER_VISION</h3>
+        <p>MobileNetV3Small TFLite model classifies 12 distinct lie types — from tight fairway to plugged bunker — with confidence scoring per detection. Rough-medium was deliberately excluded; GLA detects rough and deep rough only, where visual differentiation is reliable. Trained on a proprietary dataset of real-world turf interaction images.</p>
+      </div>
+      <div class="cap-card">
+        <div class="cap-num">02</div>
+        <div class="cap-icon">◉</div>
+        <h3>PHYSICS_ENGINE</h3>
+        <p>Real-time modeling of launch angle variance, spin decay, and trajectory shift based on detected grass type, density, and lie severity. Your expected carry and roll-out adjust automatically to the conditions.</p>
+      </div>
+      <div class="cap-card">
+        <div class="cap-num">03</div>
+        <div class="cap-icon">◎</div>
+        <h3>ADAPTIVE_ADVICE</h3>
+        <p>The advice layer synthesizes lie class, distance, club selection, wind, and your skill tier into a single, actionable recommendation. Beginners get technique. Experts get data. Everyone gets confidence.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     ADVICE ENGINE INPUTS
+══════════════════════════════════════════ -->
+<section id="advice">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-label">ADVICE_ENGINE // v1.0</div>
+      <h2>WHAT THE CADDIE KNOWS</h2>
+      <p>GLA synthesizes up to six inputs to generate each piece of advice. Lie detection is the core capability no other app can replicate — everything else makes it complete.</p>
+    </div>
+
+    <div class="advice-layout">
+
+      <!-- LEFT: Input table -->
+      <div>
+        <div class="advice-table">
+          <div class="advice-table-header">
+            <span>INPUT</span>
+            <span>SOURCE</span>
+            <span>REQUIRED</span>
+          </div>
+
+          <div class="advice-row">
+            <div class="advice-cell">
+              <span class="input-name">Lie class</span>
+              <span class="input-sub">12-category CV detection</span>
+            </div>
+            <div class="advice-cell"><span class="source-tag ai">AI model</span></div>
+            <div class="advice-cell"><span class="req-yes">● CORE</span></div>
+          </div>
+
+          <div class="advice-row">
+            <div class="advice-cell">
+              <span class="input-name">Lie severity</span>
+              <span class="input-sub">Confidence + visual cues</span>
+            </div>
+            <div class="advice-cell"><span class="source-tag derived">Derived</span></div>
+            <div class="advice-cell"><span class="req-yes">● CORE</span></div>
+          </div>
+
+          <div class="advice-row">
+            <div class="advice-cell">
+              <span class="input-name">Ball position &amp; stance</span>
+              <span class="input-sub">Weight distribution per lie type</span>
+            </div>
+            <div class="advice-cell"><span class="source-tag derived">Derived</span></div>
+            <div class="advice-cell"><span class="req-yes">● CORE</span></div>
+          </div>
+
+          <div class="advice-row">
+            <div class="advice-cell">
+              <span class="input-name">Distance to pin</span>
+              <span class="input-sub">User entry (yards/feet)</span>
+            </div>
+            <div class="advice-cell"><span class="source-tag user">User</span></div>
+            <div class="advice-cell"><span class="req-yes">● CORE</span></div>
+          </div>
+
+          <div class="advice-row">
+            <div class="advice-cell">
+              <span class="input-name">Player skill tier</span>
+              <span class="input-sub">Beginner / mid / low handicap</span>
+            </div>
+            <div class="advice-cell"><span class="source-tag user">User profile</span></div>
+            <div class="advice-cell"><span class="req-yes">● CORE</span></div>
+          </div>
+
+          <div class="advice-row">
+            <div class="advice-cell">
+              <span class="input-name">Club in hand</span>
+              <span class="input-sub">User selection</span>
+            </div>
+            <div class="advice-cell"><span class="source-tag optional">User</span></div>
+            <div class="advice-cell"><span class="req-opt">○ OPT</span></div>
+          </div>
+
+          <div class="advice-row">
+            <div class="advice-cell">
+              <span class="input-name">Wind conditions</span>
+              <span class="input-sub">Weather API integration</span>
+            </div>
+            <div class="advice-cell"><span class="source-tag optional">API</span></div>
+            <div class="advice-cell"><span class="req-opt">○ OPT</span></div>
+          </div>
+        </div>
+
+        <!-- Tier cards below table -->
+        <div style="margin-top: 28px;">
+          <div class="section-label" style="margin-bottom:14px;">SKILL_TIER_CALIBRATION</div>
+          <div class="tier-cards">
+            <div class="tier-card">
+              <div class="tier-dot beginner"></div>
+              <div>
+                <div class="tier-label beginner">BEGINNER</div>
+                <div class="tier-desc">Step-by-step technique for each lie type. Ball position, grip adjustments, swing path, and what to expect from the shot — explained in plain language.</div>
+              </div>
+            </div>
+            <div class="tier-card">
+              <div class="tier-dot mid"></div>
+              <div>
+                <div class="tier-label mid">MID_HANDICAP</div>
+                <div class="tier-desc">Club selection rationale, trajectory adjustments, and risk-reward framing. Enough detail to make a confident decision, not enough to overthink it.</div>
+              </div>
+            </div>
+            <div class="tier-card">
+              <div class="tier-dot low"></div>
+              <div>
+                <div class="tier-label low">LOW_HANDICAP</div>
+                <div class="tier-desc">Carry distance deltas, spin rate expectations, and precision club distance tuning. Fine-grained data to dial in custom yardages and shot shape decisions.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Narrative callout -->
+      <div>
+        <div class="advice-callout">
+          <p>
+            <strong>The lie is the foundation.</strong> Every other input — distance, wind, club selection —
+            only becomes useful once you know what the turf is actually doing to the ball.
+            GLA establishes that ground truth first, then builds the recommendation around it.
+          </p>
+          <p>
+            Each lie class maps to a specific <em>setup prescription</em>: ball position in stance
+            and weight distribution. A neutral fairway lie means ball center, 50/50 weight.
+            A downhill lie shifts to 60% front foot. A buried plug in the bunker goes ball back,
+            70% front foot. <strong>GLA outputs the exact split — not vague guidance.</strong>
+          </p>
+          <p>
+            Lie severity cascades through the entire advice chain. A <em>buried lie</em> in
+            deep rough doesn't just change club selection — it changes swing speed, ball position,
+            landing zone expectation, and risk tolerance. GLA models all of it.
+          </p>
+          <p>
+            <strong>Distance anchors club selection.</strong> In scoring range, GLA targets the pin.
+            In layup range, it finds the optimal position for the next shot. The physics engine
+            adjusts expected carry based on lie severity before any club recommendation is made.
+          </p>
+          <p>
+            <strong>Skill tier changes the voice, not the intelligence.</strong> The same 12-class
+            detection, the same physics model, the same inputs — presented at the depth the
+            player can actually use on the course.
+          </p>
+        </div>
+
+        <!-- Mini output preview -->
+        <div class="hero-panel" style="position:relative;">
+          <div style="position:absolute; top:-9px; left:16px; background:var(--bg); padding:0 8px; font-size:9px; letter-spacing:0.18em; color:var(--accent2);">SAMPLE_OUTPUT</div>
+          <div class="panel-row">
+            <span class="panel-key">LIE_DETECTED</span>
+            <span class="panel-val orange">Intermediate_Rough</span>
+          </div>
+          <div class="panel-row">
+            <span class="panel-key">SEVERITY</span>
+            <span class="panel-val">Moderate (68%)</span>
+          </div>
+          <div class="panel-row">
+            <span class="panel-key">DISTANCE</span>
+            <span class="panel-val">162 yds</span>
+          </div>
+          <div class="panel-row">
+            <span class="panel-key">BALL_POSITION</span>
+            <span class="panel-val blue">Center — neutral</span>
+          </div>
+          <div class="panel-row">
+            <span class="panel-key">WEIGHT_DIST</span>
+            <span class="panel-val blue">50% front / 50% back</span>
+          </div>
+          <div class="panel-row">
+            <span class="panel-key">CARRY_DELTA</span>
+            <span class="panel-val orange">−11 yds (flyer risk)</span>
+          </div>
+          <div class="panel-row">
+            <span class="panel-key">CLUB_REC</span>
+            <span class="panel-val blue">6-iron → 7-iron</span>
+          </div>
+          <div class="panel-row">
+            <span class="panel-key">SKILL_TIER</span>
+            <span class="panel-val">MID_HANDICAP</span>
+          </div>
+          <div style="margin-top:14px; padding-top:14px; border-top:1px solid var(--border); font-size:11px; color:var(--text); line-height:1.7;">
+            <span style="color:var(--accent2); font-size:9px; letter-spacing:0.16em;">ADVICE //</span><br>
+            Neutral setup — ball center, 50/50 weight. Grass will grab the hosel; close the face slightly at address. Expect a flyer: club down one. Land short of the pin and let it release.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     LIE MATRIX — weight distribution per surface
+══════════════════════════════════════════ -->
+<section id="lie-matrix" style="background:var(--bg2); border-top:1px solid var(--border);">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-label">LIE_MATRIX // SETUP_PRESCRIPTIONS</div>
+      <h2>EVERY SURFACE.<br>DIFFERENT GEOMETRY.</h2>
+      <p>Weight distribution isn't a generic tip — it's dictated by the physics of each surface. GLA outputs the exact prescription for your lie. No guessing where to stand.</p>
+    </div>
+
+    <!-- Matrix grid -->
+    <div class="lie-matrix-grid">
+
+      <div class="lie-card" data-lie="fairway">
+        <div class="lie-card-head">
+          <span class="lie-name">FAIRWAY</span>
+          <span class="lie-badge neutral">NEUTRAL</span>
+        </div>
+        <div class="lie-weight-bar">
+          <div class="bar-segment front" style="width:50%">
+            <span class="bar-pct">50%</span>
+            <span class="bar-label">FRONT</span>
+          </div>
+          <div class="bar-divider"></div>
+          <div class="bar-segment back" style="width:50%">
+            <span class="bar-pct">50%</span>
+            <span class="bar-label">BACK</span>
+          </div>
+        </div>
+        <div class="lie-detail">
+          <div class="lie-detail-row"><span class="dk">Ball position</span><span class="dv">Center of stance</span></div>
+          <div class="lie-detail-row"><span class="dk">Stance</span><span class="dv">Shoulder width</span></div>
+          <div class="lie-detail-row"><span class="dk">Key note</span><span class="dv">Standard setup — full swing</span></div>
+        </div>
+      </div>
+
+      <div class="lie-card" data-lie="hardpan">
+        <div class="lie-card-head">
+          <span class="lie-name">HARD PAN</span>
+          <span class="lie-badge forward">FORWARD LEAN</span>
+        </div>
+        <div class="lie-weight-bar">
+          <div class="bar-segment front" style="width:60%">
+            <span class="bar-pct">60%</span>
+            <span class="bar-label">FRONT</span>
+          </div>
+          <div class="bar-divider"></div>
+          <div class="bar-segment back" style="width:40%">
+            <span class="bar-pct">40%</span>
+            <span class="bar-label">BACK</span>
+          </div>
+        </div>
+        <div class="lie-detail">
+          <div class="lie-detail-row"><span class="dk">Ball position</span><span class="dv">Slightly back of center</span></div>
+          <div class="lie-detail-row"><span class="dk">Shaft lean</span><span class="dv">Forward — hands ahead</span></div>
+          <div class="lie-detail-row"><span class="dk">Key note</span><span class="dv">Pick it clean — no divot</span></div>
+        </div>
+      </div>
+
+      <div class="lie-card" data-lie="rough">
+        <div class="lie-card-head">
+          <span class="lie-name">ROUGH</span>
+          <span class="lie-badge forward">FORWARD BIAS</span>
+        </div>
+        <div class="lie-weight-bar">
+          <div class="bar-segment front" style="width:55%">
+            <span class="bar-pct">55%</span>
+            <span class="bar-label">FRONT</span>
+          </div>
+          <div class="bar-divider"></div>
+          <div class="bar-segment back" style="width:45%">
+            <span class="bar-pct">45%</span>
+            <span class="bar-label">BACK</span>
+          </div>
+        </div>
+        <div class="lie-detail">
+          <div class="lie-detail-row"><span class="dk">Ball position</span><span class="dv">Center to slightly back</span></div>
+          <div class="lie-detail-row"><span class="dk">Grip</span><span class="dv">Firmer — resist twist</span></div>
+          <div class="lie-detail-row"><span class="dk">Key note</span><span class="dv">Steeper angle of attack</span></div>
+        </div>
+      </div>
+
+      <div class="lie-card" data-lie="deeprough">
+        <div class="lie-card-head">
+          <span class="lie-name">DEEP ROUGH</span>
+          <span class="lie-badge heavy">HEAVY FORWARD</span>
+        </div>
+        <div class="lie-weight-bar">
+          <div class="bar-segment front" style="width:65%">
+            <span class="bar-pct">65%</span>
+            <span class="bar-label">FRONT</span>
+          </div>
+          <div class="bar-divider"></div>
+          <div class="bar-segment back" style="width:35%">
+            <span class="bar-pct">35%</span>
+            <span class="bar-label">BACK</span>
+          </div>
+        </div>
+        <div class="lie-detail">
+          <div class="lie-detail-row"><span class="dk">Ball position</span><span class="dv">Back of center</span></div>
+          <div class="lie-detail-row"><span class="dk">Swing</span><span class="dv">Aggressive downswing</span></div>
+          <div class="lie-detail-row"><span class="dk">Key note</span><span class="dv">Commit — no deceleration</span></div>
+        </div>
+      </div>
+
+      <div class="lie-card" data-lie="fairwaybunker">
+        <div class="lie-card-head">
+          <span class="lie-name">FAIRWAY BUNKER</span>
+          <span class="lie-badge neutral">EVEN — PICK CLEAN</span>
+        </div>
+        <div class="lie-weight-bar">
+          <div class="bar-segment front" style="width:50%">
+            <span class="bar-pct">50%</span>
+            <span class="bar-label">FRONT</span>
+          </div>
+          <div class="bar-divider"></div>
+          <div class="bar-segment back" style="width:50%">
+            <span class="bar-pct">50%</span>
+            <span class="bar-label">BACK</span>
+          </div>
+        </div>
+        <div class="lie-detail">
+          <div class="lie-detail-row"><span class="dk">Ball position</span><span class="dv">Center — grip down 1"</span></div>
+          <div class="lie-detail-row"><span class="dk">Feet</span><span class="dv">Dig in lightly for stability</span></div>
+          <div class="lie-detail-row"><span class="dk">Key note</span><span class="dv">Sweep it — don't dig</span></div>
+        </div>
+      </div>
+
+      <div class="lie-card" data-lie="greensidebunker">
+        <div class="lie-card-head">
+          <span class="lie-name">GREENSIDE BUNKER</span>
+          <span class="lie-badge forward">FORWARD — DIG</span>
+        </div>
+        <div class="lie-weight-bar">
+          <div class="bar-segment front" style="width:60%">
+            <span class="bar-pct">60%</span>
+            <span class="bar-label">FRONT</span>
+          </div>
+          <div class="bar-divider"></div>
+          <div class="bar-segment back" style="width:40%">
+            <span class="bar-pct">40%</span>
+            <span class="bar-label">BACK</span>
+          </div>
+        </div>
+        <div class="lie-detail">
+          <div class="lie-detail-row"><span class="dk">Ball position</span><span class="dv">Forward of center</span></div>
+          <div class="lie-detail-row"><span class="dk">Face</span><span class="dv">Open — aim left of target</span></div>
+          <div class="lie-detail-row"><span class="dk">Key note</span><span class="dv">Hit 2" behind ball — splash</span></div>
+        </div>
+      </div>
+
+      <div class="lie-card" data-lie="pluggedbunker">
+        <div class="lie-card-head">
+          <span class="lie-name">PLUGGED BUNKER</span>
+          <span class="lie-badge heavy">HEAVY FORWARD</span>
+        </div>
+        <div class="lie-weight-bar">
+          <div class="bar-segment front" style="width:70%">
+            <span class="bar-pct">70%</span>
+            <span class="bar-label">FRONT</span>
+          </div>
+          <div class="bar-divider"></div>
+          <div class="bar-segment back" style="width:30%">
+            <span class="bar-pct">30%</span>
+            <span class="bar-label">BACK</span>
+          </div>
+        </div>
+        <div class="lie-detail">
+          <div class="lie-detail-row"><span class="dk">Ball position</span><span class="dv">Back of center</span></div>
+          <div class="lie-detail-row"><span class="dk">Face</span><span class="dv">Square or closed</span></div>
+          <div class="lie-detail-row"><span class="dk">Key note</span><span class="dv">Drive down hard — no follow-through expectation</span></div>
+        </div>
+      </div>
+
+      <div class="lie-card" data-lie="pineneedles">
+        <div class="lie-card-head">
+          <span class="lie-name">PINE NEEDLES</span>
+          <span class="lie-badge caution">BALANCED — CAREFUL</span>
+        </div>
+        <div class="lie-weight-bar">
+          <div class="bar-segment front" style="width:50%">
+            <span class="bar-pct">50%</span>
+            <span class="bar-label">FRONT</span>
+          </div>
+          <div class="bar-divider"></div>
+          <div class="bar-segment back" style="width:50%">
+            <span class="bar-pct">50%</span>
+            <span class="bar-label">BACK</span>
+          </div>
+        </div>
+        <div class="lie-detail">
+          <div class="lie-detail-row"><span class="dk">Ball position</span><span class="dv">Center — teed up slightly</span></div>
+          <div class="lie-detail-row"><span class="dk">Feet</span><span class="dv">Narrow — prevent slipping</span></div>
+          <div class="lie-detail-row"><span class="dk">Key note</span><span class="dv">Hover the club — no grounding</span></div>
+        </div>
+      </div>
+
+    </div><!-- /lie-matrix-grid -->
+
+    <div style="margin-top:32px; padding:16px 20px; border:1px solid var(--border); display:flex; gap:20px; flex-wrap:wrap; align-items:center;">
+      <span style="font-size:9px; letter-spacing:0.16em; color:var(--text-dim); text-transform:uppercase;">WEIGHT_KEY</span>
+      <span style="display:flex; align-items:center; gap:7px; font-size:10px; color:var(--text-dim);">
+        <span style="display:inline-block; width:10px; height:10px; background:rgba(0,200,255,0.5);"></span> Neutral (50/50)
+      </span>
+      <span style="display:flex; align-items:center; gap:7px; font-size:10px; color:var(--text-dim);">
+        <span style="display:inline-block; width:10px; height:10px; background:rgba(0,255,157,0.5);"></span> Forward bias (55–65%)
+      </span>
+      <span style="display:flex; align-items:center; gap:7px; font-size:10px; color:var(--text-dim);">
+        <span style="display:inline-block; width:10px; height:10px; background:rgba(255,107,53,0.5);"></span> Heavy forward (65–70%)
+      </span>
+      <span style="display:flex; align-items:center; gap:7px; font-size:10px; color:var(--text-dim);">
+        <span style="display:inline-block; width:10px; height:10px; background:rgba(255,200,0,0.4);"></span> Balanced / surface caution
+      </span>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     UNEVEN LIES — slope & stance matrix
+══════════════════════════════════════════ -->
+<section id="uneven-lies" style="border-top:1px solid var(--border);">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-label">UNEVEN_LIES // SLOPE_PRESCRIPTIONS</div>
+      <h2>THE SHOTS THAT<br>BREAK SCORECARDS.</h2>
+      <p>Uneven lies change six variables simultaneously — weight, grip, shoulder angle, aim line, ball position, and ball flight shape. GLA maps all six for each slope condition. No guessing, no half-measures.</p>
+    </div>
+
+    <div class="uneven-grid">
+
+      <!-- ── UPHILL ── -->
+      <div class="uneven-card">
+        <div class="uneven-head">
+          <div class="uneven-tag" style="color:var(--accent2); border-color:rgba(0,255,157,0.3); background:rgba(0,255,157,0.05);">UPHILL LIE</div>
+          <div class="uneven-subtitle">Ball above the slope — easier to execute</div>
+        </div>
+
+        <div class="uneven-weight-wrap">
+          <div class="slope-bar-label">WEIGHT DISTRIBUTION</div>
+          <div class="slope-bar">
+            <div class="slope-seg back-heavy" style="width:60%">
+              <span class="slope-pct">60%</span>
+              <span class="slope-foot">BACK</span>
+            </div>
+            <div class="slope-seg front-light" style="width:40%">
+              <span class="slope-pct">40%</span>
+              <span class="slope-foot">FRONT</span>
+            </div>
+          </div>
+          <div class="slope-note">Back foot absorbs slope — match your spine to the hill</div>
+        </div>
+
+        <div class="uneven-specs">
+          <div class="uspec-row">
+            <div class="uspec-block">
+              <div class="uspec-label">BALL POSITION</div>
+              <div class="uspec-val">Center to slightly forward</div>
+            </div>
+            <div class="uspec-block">
+              <div class="uspec-label">GRIP</div>
+              <div class="uspec-val">Normal — full grip pressure</div>
+            </div>
+          </div>
+          <div class="uspec-row">
+            <div class="uspec-block">
+              <div class="uspec-label">SHOULDER ANGLE</div>
+              <div class="uspec-val">Tilted parallel to slope — back shoulder lower</div>
+            </div>
+            <div class="uspec-block">
+              <div class="uspec-label">WHERE TO AIM</div>
+              <div class="uspec-val">Right of target (draw bias)</div>
+            </div>
+          </div>
+          <div class="uspec-row">
+            <div class="uspec-block uspec-full">
+              <div class="uspec-label">CLUB ADJUSTMENT</div>
+              <div class="uspec-val">Club up 1–2 — slope adds effective loft</div>
+            </div>
+          </div>
+          <div class="uspec-flight">
+            <div class="uspec-label">BALL FLIGHT SHAPE</div>
+            <div class="flight-pill draw">DRAW / HOOK BIAS</div>
+            <div class="flight-why">Slope closes the face through impact — aim right to compensate</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── DOWNHILL ── -->
+      <div class="uneven-card">
+        <div class="uneven-head">
+          <div class="uneven-tag" style="color:var(--accent3); border-color:rgba(255,107,53,0.3); background:rgba(255,107,53,0.05);">DOWNHILL LIE</div>
+          <div class="uneven-subtitle">Hardest of the four — high mishit rate</div>
+        </div>
+
+        <div class="uneven-weight-wrap">
+          <div class="slope-bar-label">WEIGHT DISTRIBUTION</div>
+          <div class="slope-bar">
+            <div class="slope-seg front-heavy" style="width:60%">
+              <span class="slope-pct">60%</span>
+              <span class="slope-foot">FRONT</span>
+            </div>
+            <div class="slope-seg back-light" style="width:40%">
+              <span class="slope-pct">40%</span>
+              <span class="slope-foot">BACK</span>
+            </div>
+          </div>
+          <div class="slope-note">Chase the slope with the front foot — stay down through impact</div>
+        </div>
+
+        <div class="uneven-specs">
+          <div class="uspec-row">
+            <div class="uspec-block">
+              <div class="uspec-label">BALL POSITION</div>
+              <div class="uspec-val">Back of center — promotes contact</div>
+            </div>
+            <div class="uspec-block">
+              <div class="uspec-label">GRIP</div>
+              <div class="uspec-val">Firm — choke down 1" for control</div>
+            </div>
+          </div>
+          <div class="uspec-row">
+            <div class="uspec-block">
+              <div class="uspec-label">SHOULDER ANGLE</div>
+              <div class="uspec-val">Tilted parallel to slope — front shoulder lower</div>
+            </div>
+            <div class="uspec-block">
+              <div class="uspec-label">WHERE TO AIM</div>
+              <div class="uspec-val">Left of target (fade/slice bias)</div>
+            </div>
+          </div>
+          <div class="uspec-row">
+            <div class="uspec-block uspec-full">
+              <div class="uspec-label">CLUB ADJUSTMENT</div>
+              <div class="uspec-val">Club down 1–2 — slope delofts the face, adds distance</div>
+            </div>
+          </div>
+          <div class="uspec-flight">
+            <div class="uspec-label">BALL FLIGHT SHAPE</div>
+            <div class="flight-pill fade">FADE / CUT BIAS</div>
+            <div class="flight-why">Slope opens the face — aim left, expect lower, hotter flight</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── BALL ABOVE FEET ── -->
+      <div class="uneven-card">
+        <div class="uneven-head">
+          <div class="uneven-tag" style="color:var(--accent); border-color:rgba(0,200,255,0.3); background:rgba(0,200,255,0.05);">BALL ABOVE FEET</div>
+          <div class="uneven-subtitle">Standing more upright — arc goes flatter</div>
+        </div>
+
+        <div class="uneven-weight-wrap">
+          <div class="slope-bar-label">WEIGHT DISTRIBUTION</div>
+          <div class="slope-bar">
+            <div class="slope-seg neutral-l" style="width:50%">
+              <span class="slope-pct">50%</span>
+              <span class="slope-foot">FRONT</span>
+            </div>
+            <div class="slope-seg neutral-r" style="width:50%">
+              <span class="slope-pct">50%</span>
+              <span class="slope-foot">BACK</span>
+            </div>
+          </div>
+          <div class="slope-note">Sit into heels — gravity pulls you into the hill</div>
+        </div>
+
+        <div class="uneven-specs">
+          <div class="uspec-row">
+            <div class="uspec-block">
+              <div class="uspec-label">BALL POSITION</div>
+              <div class="uspec-val">Center — stand taller, less knee flex</div>
+            </div>
+            <div class="uspec-block">
+              <div class="uspec-label">GRIP</div>
+              <div class="uspec-val">Choke down 1–2" — club is effectively longer</div>
+            </div>
+          </div>
+          <div class="uspec-row">
+            <div class="uspec-block">
+              <div class="uspec-label">SHOULDER ANGLE</div>
+              <div class="uspec-val">More level than normal — flatter swing plane</div>
+            </div>
+            <div class="uspec-block">
+              <div class="uspec-label">WHERE TO AIM</div>
+              <div class="uspec-val">Right of target (draw/hook bias)</div>
+            </div>
+          </div>
+          <div class="uspec-row">
+            <div class="uspec-block uspec-full">
+              <div class="uspec-label">SWING KEY</div>
+              <div class="uspec-val">Shorter, controlled swing — resist falling back on heels</div>
+            </div>
+          </div>
+          <div class="uspec-flight">
+            <div class="uspec-label">BALL FLIGHT SHAPE</div>
+            <div class="flight-pill draw">DRAW / HOOK BIAS</div>
+            <div class="flight-why">Flatter arc closes the face — aim right, expect right-to-left flight</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── BALL BELOW FEET ── -->
+      <div class="uneven-card">
+        <div class="uneven-head">
+          <div class="uneven-tag" style="color:#ffc800; border-color:rgba(255,200,0,0.3); background:rgba(255,200,0,0.05);">BALL BELOW FEET</div>
+          <div class="uneven-subtitle">Most physically demanding — balance critical</div>
+        </div>
+
+        <div class="uneven-weight-wrap">
+          <div class="slope-bar-label">WEIGHT DISTRIBUTION</div>
+          <div class="slope-bar">
+            <div class="slope-seg neutral-l" style="width:50%">
+              <span class="slope-pct">50%</span>
+              <span class="slope-foot">FRONT</span>
+            </div>
+            <div class="slope-seg neutral-r" style="width:50%">
+              <span class="slope-pct">50%</span>
+              <span class="slope-foot">BACK</span>
+            </div>
+          </div>
+          <div class="slope-note">Press into toes — flex knees more, stay bent through impact</div>
+        </div>
+
+        <div class="uneven-specs">
+          <div class="uspec-row">
+            <div class="uspec-block">
+              <div class="uspec-label">BALL POSITION</div>
+              <div class="uspec-val">Center — bend more from hips, reach down</div>
+            </div>
+            <div class="uspec-block">
+              <div class="uspec-label">GRIP</div>
+              <div class="uspec-val">Full grip at top — club is effectively shorter</div>
+            </div>
+          </div>
+          <div class="uspec-row">
+            <div class="uspec-block">
+              <div class="uspec-label">SHOULDER ANGLE</div>
+              <div class="uspec-val">More tilted — steeper swing plane</div>
+            </div>
+            <div class="uspec-block">
+              <div class="uspec-label">WHERE TO AIM</div>
+              <div class="uspec-val">Left of target (fade/slice bias)</div>
+            </div>
+          </div>
+          <div class="uspec-row">
+            <div class="uspec-block uspec-full">
+              <div class="uspec-label">SWING KEY</div>
+              <div class="uspec-val">Maintain knee flex — do not straighten up through impact</div>
+            </div>
+          </div>
+          <div class="uspec-flight">
+            <div class="uspec-label">BALL FLIGHT SHAPE</div>
+            <div class="flight-pill fade">FADE / CUT BIAS</div>
+            <div class="flight-why">Steeper arc opens the face — aim left, expect left-to-right flight</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /uneven-grid -->
+
+    <!-- Quick reference cheat strip -->
+    <div class="slope-cheatstrip">
+      <div class="cheat-head">QUICK_REF // AIM &amp; SHAPE</div>
+      <div class="cheat-grid">
+        <div class="cheat-cell">
+          <div class="cheat-lie">Uphill</div>
+          <div class="cheat-aim">Aim <span class="aim-right">RIGHT</span></div>
+          <div class="cheat-shape draw-shape">▶ DRAW</div>
+        </div>
+        <div class="cheat-cell">
+          <div class="cheat-lie">Downhill</div>
+          <div class="cheat-aim">Aim <span class="aim-left">LEFT</span></div>
+          <div class="cheat-shape fade-shape">◀ FADE</div>
+        </div>
+        <div class="cheat-cell">
+          <div class="cheat-lie">Ball above feet</div>
+          <div class="cheat-aim">Aim <span class="aim-right">RIGHT</span></div>
+          <div class="cheat-shape draw-shape">▶ DRAW</div>
+        </div>
+        <div class="cheat-cell">
+          <div class="cheat-lie">Ball below feet</div>
+          <div class="cheat-aim">Aim <span class="aim-left">LEFT</span></div>
+          <div class="cheat-shape fade-shape">◀ FADE</div>
+        </div>
+      </div>
+      <div class="cheat-footnote">Pattern: slope or ground pushing face open = FADE. Face closing through impact = DRAW. GLA calculates the magnitude based on severity of slope.</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     FOUNDER / MISSION
+══════════════════════════════════════════ -->
+<section id="mission">
+  <div class="container">
+    <div class="founder-layout">
+      <div>
+        <div class="founder-img-wrap">
+          <img src="/johnny_headshot.png" alt="Johnny Barnachia — Founder, Golf Lie Analyzer" />
+        </div>
+        <div style="margin-top:16px;">
+          <div style="font-size:9px; letter-spacing:0.18em; color:var(--text-dim); margin-bottom:8px;">ID: FOUNDER</div>
+          <div style="font-family:var(--display); font-size:11px; color:var(--text-hi); letter-spacing:0.1em;">Program Manager</div>
+          <div style="font-size:11px; color:var(--text-dim);">Solo Founder // GLA</div>
+        </div>
+      </div>
+
+      <div class="founder-body">
+        <div class="section-label">MISSION_LOG</div>
+        <h2 style="font-family:var(--display); font-size:clamp(18px,2.5vw,28px); font-weight:700; letter-spacing:0.06em; color:var(--text-hi); margin-bottom:18px; line-height:1.2;">ENGINEERED.<br>NOT JUST CODED.</h2>
+
+        <div class="founder-badge">
+          <span class="badge">MBA</span>
+          <span class="badge">PMP®</span>
+          <span class="badge">CFCM</span>
+          <span class="badge">LSSBB</span>
+          <span class="badge">USN_COAST_GUARD_22YR</span>
+          <span class="badge">DEFENSE_SECTOR</span>
+        </div>
+
+        <div class="founder-quote">
+          <p>"I am a Defense &amp; Aerospace Program Manager by trade. I spend my days bridging technical innovation with federal compliance — executing high-stakes hardware/software programs for the DoD. I built GLA because I wanted the same level of data-driven situational awareness I use at work, applied to the most difficult shots in golf."</p>
+        </div>
+
+        <p>
+          The discipline that ships flight simulators on compressed timelines for the U.S. Navy
+          — <strong>risk identification, systems thinking, zero-defect delivery</strong> —
+          is the same discipline behind every architectural decision in GLA.
+        </p>
+        <p>
+          This is not a weekend app. It is a seriously engineered product built by someone
+          who has spent 20+ years delivering complex systems under real-world pressure,
+          now applying that rigor to a problem every golfer faces on every round.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SPECS
+══════════════════════════════════════════ -->
+<section id="specs">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-label">TECHNICAL_SPECIFICATIONS</div>
+      <h2>CURRENT BUILD STATE</h2>
+      <p>Live specs as of validation Phase 1. Updated with each milestone release.</p>
+    </div>
+    <div class="specs-grid">
+      <div class="spec-block">
+        <h4>VISION_MODEL</h4>
+        <div class="spec-row"><span class="sk">Architecture</span><span class="sv">MobileNetV3Small</span></div>
+        <div class="spec-row"><span class="sk">Format</span><span class="sv">TFLite</span></div>
+        <div class="spec-row"><span class="sk">Lie classes</span><span class="sv hi">12</span></div>
+        <div class="spec-row"><span class="sk">Excluded class</span><span class="sv">Rough-medium (low detection reliability)</span></div>
+        <div class="spec-row"><span class="sk">Output</span><span class="sv">Class + confidence score</span></div>
+        <div class="spec-row"><span class="sk">Severity</span><span class="sv">Derived from confidence + visual cues</span></div>
+      </div>
+      <div class="spec-block">
+        <h4>INFERENCE_STACK</h4>
+        <div class="spec-row"><span class="sk">Deployment</span><span class="sv">Server-side</span></div>
+        <div class="spec-row"><span class="sk">Infrastructure</span><span class="sv">GCP Cloud Run</span></div>
+        <div class="spec-row"><span class="sk">Image handling</span><span class="sv">Retained for model training</span></div>
+        <div class="spec-row"><span class="sk">PII attached</span><span class="sv hi">None — images are anonymous</span></div>
+        <div class="spec-row"><span class="sk">Training use</span><span class="sv">Lie classification dataset improvement</span></div>
+        <div class="spec-row"><span class="sk">User consent</span><span class="sv">Explicit at beta signup</span></div>
+        <div class="spec-row"><span class="sk">Data sold / shared</span><span class="sv hi">Never</span></div>
+      </div>
+      <div class="spec-block">
+        <h4>ADVICE_ENGINE</h4>
+        <div class="spec-row"><span class="sk">Core inputs</span><span class="sv">Lie class, severity, distance, skill</span></div>
+        <div class="spec-row"><span class="sk">Ball position</span><span class="sv hi">Derived per lie type</span></div>
+        <div class="spec-row"><span class="sk">Neutral setup</span><span class="sv">Ball center, 50% / 50% weight</span></div>
+        <div class="spec-row"><span class="sk">Weight distribution</span><span class="sv">Lie-specific split (e.g. 60F / 40B)</span></div>
+        <div class="spec-row"><span class="sk">Optional inputs</span><span class="sv">Club selection, wind</span></div>
+        <div class="spec-row"><span class="sk">Skill tiers</span><span class="sv hi">3</span></div>
+        <div class="spec-row"><span class="sk">Physics modeling</span><span class="sv">Launch angle, spin decay</span></div>
+        <div class="spec-row"><span class="sk">Wind integration</span><span class="sv">Weather API (Phase 2)</span></div>
+      </div>
+      <div class="spec-block">
+        <h4>PLATFORM_STATUS</h4>
+        <div class="spec-row"><span class="sk">Phase</span><span class="sv orange">Validation Phase 1</span></div>
+        <div class="spec-row"><span class="sk">Beta capacity</span><span class="sv">500 users</span></div>
+        <div class="spec-row"><span class="sk">Supported devices</span><span class="sv">iOS + Android</span></div>
+        <div class="spec-row"><span class="sk">Priority access</span><span class="sv">All handicap levels</span></div>
+        <div class="spec-row"><span class="sk">Training data use</span><span class="sv">Beta users improve model</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     FLYWHEEL — data loop as product feature
+══════════════════════════════════════════ -->
+<section id="flywheel" style="background:var(--bg2); border-top:1px solid var(--border); padding:60px 0;">
+  <div class="container">
+    <div class="flywheel-inner">
+
+      <div class="flywheel-text">
+        <div class="section-label">DATA_FLYWHEEL</div>
+        <h2 style="font-family:var(--display); font-size:clamp(20px,2.8vw,30px); font-weight:700; letter-spacing:0.06em; color:var(--text-hi); margin-bottom:16px; line-height:1.15;">
+          EVERY IMAGE<br>MAKES IT SMARTER.
+        </h2>
+        <p style="font-size:13px; line-height:1.9; color:var(--text); margin-bottom:12px;">
+          GLA's lie detection model improves continuously as beta users capture images from
+          real courses, real conditions, real lighting. The more lies the model sees,
+          the more accurately it reads the next one.
+        </p>
+        <p style="font-size:13px; line-height:1.9; color:var(--text); margin-bottom:12px;">
+          This is the same data flywheel that powers every world-class computer vision system —
+          <strong style="color:var(--text-hi);">real-world image volume beats lab data every time.</strong>
+          Beta users aren't just testing GLA. They're training it.
+        </p>
+        <p style="font-size:13px; line-height:1.9; color:var(--text);">
+          Images are retained anonymously — no personal data is ever attached.
+          You consent explicitly at signup. You can withdraw consent at any time.
+          Your data is never sold or shared.
+        </p>
+      </div>
+
+      <div class="flywheel-loop">
+        <!-- Loop diagram: 4 nodes in a cycle -->
+        <div class="loop-node accent-node">
+          <div class="loop-num">01</div>
+          <div class="loop-title">USER CAPTURES LIE</div>
+          <div class="loop-sub">Real course. Real conditions.</div>
+        </div>
+        <div class="loop-arrow">↓</div>
+        <div class="loop-node">
+          <div class="loop-num">02</div>
+          <div class="loop-title">IMAGE ANALYZED</div>
+          <div class="loop-sub">Server-side inference returns advice</div>
+        </div>
+        <div class="loop-arrow">↓</div>
+        <div class="loop-node">
+          <div class="loop-num">03</div>
+          <div class="loop-title">IMAGE ADDED TO DATASET</div>
+          <div class="loop-sub">Anonymous. Labeled by lie class.</div>
+        </div>
+        <div class="loop-arrow">↓</div>
+        <div class="loop-node accent2-node">
+          <div class="loop-num">04</div>
+          <div class="loop-title">MODEL RETRAINED</div>
+          <div class="loop-sub">12-class accuracy improves → repeat</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     BETA CTA
+══════════════════════════════════════════ -->
+<section id="beta">
+  <div class="container">
+    <div class="beta-wrap">
+      <div class="section-label" style="justify-content:center;">REQUEST_ACCESS</div>
+      <h2>YOUR CADDIE<br><span>IS WAITING.</span></h2>
+      <p>
+        Validation Phase 1 is active. Beta is limited to 500 users across all skill levels —
+        from first-season beginners to scratch players. Every lie image you take
+        feeds the training dataset, making GLA more accurate for every golfer
+        who comes after you. <strong style="color:var(--text-hi);">You're not just using the product. You're building it.</strong>
+      </p>
+
+      <form class="waitlist-form" name="waitlist" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+        <input type="hidden" name="form-name" value="waitlist" />
+        <input type="text" name="bot-field" style="display:none" />
+        <input type="email" name="email" placeholder="your@email.com" required />
+        <button type="submit">JOIN_WAITLIST</button>
+      </form>
+
+      <p class="beta-sub">No spam. Access notification only. Unsubscribe anytime.</p>
+
+      <div class="privacy-strip">
+        <div class="privacy-cell">
+          <h5>MODEL_TRAINING</h5>
+          <p>Lie images you capture are retained and used to improve GLA's classification model. More images = more accurate lie detection for every user. You consent to this at signup.</p>
+        </div>
+        <div class="privacy-cell">
+          <h5>ANONYMOUS_BY_DESIGN</h5>
+          <p>No personal data is attached to training images. Your name, account, location, and device ID are never linked to the image data sent for training.</p>
+        </div>
+        <div class="privacy-cell">
+          <h5>NEVER_SOLD</h5>
+          <p>GLA does not sell, license, or share your image data with third parties — ever. Training data is used exclusively to improve GLA's own lie detection model.</p>
+        </div>
+        <div class="privacy-cell">
+          <h5>YOUR_EMAIL</h5>
+          <p>Used solely for beta access notification. No marketing lists, no third-party sharing. Unsubscribe at any time.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     FOOTER
+══════════════════════════════════════════ -->
+<footer>
+  <div class="footer-inner">
+    <span class="footer-logo">GLA_NEURAL</span>
+    <span class="footer-copy">© 2025 GOLF LIE ANALYZER. ALL RIGHTS RESERVED.</span>
+  </div>
+</footer>
+
+<script>
+  function toggleMenu() {
+    document.getElementById('mobile-menu').classList.toggle('open');
+  }
+  function closeMenu() {
+    document.getElementById('mobile-menu').classList.remove('open');
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GLA | Operational Field Guide</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navy: {
+                            950: '#020617', // Deepest Black/Blue
+                            900: '#0B1120', // Main BG
+                            800: '#1e293b', // Card BG
+                            700: '#334155', // Borders
+                        },
+                        cyan: {
+                            DEFAULT: '#00F0FF', // The "Neural" Electric Blue
+                            dim: 'rgba(0, 240, 255, 0.1)',
+                            glow: 'rgba(0, 240, 255, 0.5)',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    backgroundImage: {
+                        'grid-pattern': "radial-gradient(circle, #1e293b 1px, transparent 1px)",
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-navy-950 text-gray-300 font-sans antialiased selection:bg-cyan selection:text-navy-950">
+
+    <div class="fixed inset-0 bg-grid-pattern bg-[size:30px_30px] opacity-20 pointer-events-none z-0"></div>
+    <div class="fixed top-0 left-0 w-full h-full bg-gradient-to-b from-navy-950 via-transparent to-navy-950 z-0 pointer-events-none"></div>
+
+    <nav class="fixed w-full z-50 top-0 border-b border-navy-700/50 bg-navy-950/80 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <a href="index.html" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                <i class="ph ph-brain text-cyan text-xl"></i>
+                <span class="font-mono font-bold text-white tracking-tighter">GLA<span class="text-cyan">_NEURAL</span></span>
+            </a>
+            
+            <div class="hidden md:flex items-center gap-8 font-mono text-sm tracking-wide">
+                <a href="index.html#capabilities" class="hover:text-cyan transition-colors text-gray-500">MODEL_ARCH</a>
+                <a href="index.html#beta" class="hover:text-cyan transition-colors text-gray-500">JOIN_BETA</a>
+            </div>
+             <a href="index.html" class="font-mono text-xs font-bold text-cyan border border-cyan/50 px-4 py-2 hover:bg-cyan/10 transition-all duration-300 flex items-center gap-2">
+                <i class="ph ph-arrow-left"></i> BACK_TO_BASE
+            </a>
+        </div>
+    </nav>
+
+    <section class="relative pt-32 pb-12">
+        <div class="max-w-4xl mx-auto px-6 text-center relative z-10">
+            <div class="inline-flex items-center gap-3 px-3 py-1 border border-cyan/30 bg-cyan/5 rounded-full mb-6">
+                <span class="font-mono text-xs text-cyan tracking-widest">PROTOCOL V1.0 // DOCUMENTATION</span>
+            </div>
+            <h1 class="text-4xl lg:text-5xl font-bold text-white leading-tight mb-6 tracking-tight font-mono uppercase">
+                Operational<br>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan to-blue-600">Field Guide</span>
+            </h1>
+            <p class="text-lg text-gray-400 max-w-xl mx-auto leading-relaxed">
+                Standard operating procedures for deploying the GLA Neural Interface in live turf environments. Follow sequence for optimal data accuracy.
+            </p>
+        </div>
+    </section>
+
+    <section class="py-16 relative z-10">
+        <div class="max-w-4xl mx-auto px-6 relative">
+            <div class="absolute left-12 md:left-1/2 top-0 bottom-0 w-px bg-navy-700 md:-translate-x-1/2 z-0"></div>
+
+            <div class="relative z-10 grid grid-cols-[50px_1fr] md:grid-cols-2 gap-8 mb-24 items-center">
+                <div class="md:absolute md:left-1/2 md:-translate-x-1/2 w-12 h-12 bg-navy-950 border-2 border-cyan rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(0,240,255,0.3)]">
+                    <span class="font-mono font-bold text-cyan">01</span>
+                </div>
+                
+                <div class="md:text-right md:pr-12 order-2 md:order-1">
+                    <h3 class="text-xl font-bold text-white mb-2 font-mono uppercase">Initialize Sequence</h3>
+                    <p class="text-gray-400 text-sm leading-relaxed mb-4">
+                        Launch the application. Ensure camera permissions are granted. The neural engine will require 2-3 seconds to load local weights into RAM.
+                    </p>
+                    <div class="inline-flex items-center gap-2 font-mono text-xs text-cyan/70">
+                        <i class="ph ph-check-circle"></i> Status: Ready State
+                    </div>
+                </div>
+                
+                <div class="order-3 md:order-2 md:pl-12">
+                    <div class="bg-navy-900 border border-navy-700 rounded-xl overflow-hidden aspect-[9/16] relative group">
+                         <img src="https://via.placeholder.com/450x800/0B1120/00F0FF?text=APP+SCREENSHOT:+HOME" alt="App Home Screen" class="w-full h-full object-cover opacity-50 group-hover:opacity-100 transition-opacity">
+                        <div class="absolute inset-0 border-2 border-cyan/0 group-hover:border-cyan/50 transition-all rounded-xl pointer-events-none"></div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="relative z-10 grid grid-cols-[50px_1fr] md:grid-cols-2 gap-8 mb-24 items-center">
+                 <div class="md:absolute md:left-1/2 md:-translate-x-1/2 w-12 h-12 bg-navy-950 border-2 border-cyan rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(0,240,255,0.3)]">
+                    <span class="font-mono font-bold text-cyan">02</span>
+                </div>
+
+                <div class="order-3 md:order-1 md:pr-12">
+                    <div class="bg-navy-900 border border-navy-700 rounded-xl overflow-hidden aspect-[9/16] relative group">
+                        <img src="https://via.placeholder.com/450x800/0B1120/00F0FF?text=APP+SCREENSHOT:+CAMERA+SCAN" alt="Camera Scan Mode" class="w-full h-full object-cover opacity-50 group-hover:opacity-100 transition-opacity">
+                        <div class="absolute inset-0 border-2 border-cyan/0 group-hover:border-cyan/50 transition-all rounded-xl pointer-events-none"></div>
+                    </div>
+                </div>
+
+                 <div class="order-2 md:pl-12">
+                    <h3 class="text-xl font-bold text-white mb-2 font-mono uppercase">Acquire Target</h3>
+                    <p class="text-gray-400 text-sm leading-relaxed mb-4">
+                        Position the golf ball within the central reticle. Hold device steady between 18-24 inches from the turf. The glowing bounding box indicates successful object detection.
+                    </p>
+                    <div class="inline-flex items-center gap-2 font-mono text-xs text-cyan/70">
+                        <i class="ph ph-crosshair"></i> Action: Hold Steady
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="relative z-10 grid grid-cols-[50px_1fr] md:grid-cols-2 gap-8 items-center">
+                 <div class="md:absolute md:left-1/2 md:-translate-x-1/2 w-12 h-12 bg-navy-950 border-2 border-cyan rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(0,240,255,0.3)]">
+                    <span class="font-mono font-bold text-cyan">03</span>
+                </div>
+
+                 <div class="md:text-right md:pr-12 order-2 md:order-1">
+                    <h3 class="text-xl font-bold text-white mb-2 font-mono uppercase">Interpret Telemetry</h3>
+                    <p class="text-gray-400 text-sm leading-relaxed mb-4">
+                        Once analyzed, data outputs will appear on the HUD. Review "Lie Severity" (percentage buried) and "Spin Decay" predictions before executing shot.
+                    </p>
+                    <div class="inline-flex items-center gap-2 font-mono text-xs text-cyan/70">
+                        <i class="ph ph-trend-up"></i> Output: Data Ready
+                    </div>
+                </div>
+
+                <div class="order-3 md:order-2 md:pl-12">
+                    <div class="bg-navy-900 border border-navy-700 rounded-xl overflow-hidden aspect-[9/16] relative group">
+                        <img src="https://via.placeholder.com/450x800/0B1120/00F0FF?text=APP+SCREENSHOT:+RESULTS+HUD" alt="Results Screen" class="w-full h-full object-cover opacity-50 group-hover:opacity-100 transition-opacity">
+                        <div class="absolute inset-0 border-2 border-cyan/0 group-hover:border-cyan/50 transition-all rounded-xl pointer-events-none"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <section class="py-20 border-t border-navy-800 bg-navy-900/50 relative z-10">
+        <div class="max-w-4xl mx-auto px-6">
+            <div class="flex items-center gap-2 mb-8">
+                <i class="ph ph-sliders-horizontal text-cyan text-xl"></i>
+                <h2 class="font-mono font-bold text-white uppercase tracking-wider">Mission Optimizers</h2>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="bg-navy-950 border border-navy-700 p-6 rounded-xl flex gap-4">
+                    <i class="ph ph-sun-dim text-2xl text-cyan/70"></i>
+                    <div>
+                        <h4 class="font-mono text-white font-bold text-sm mb-1">Lighting Conditions</h4>
+                        <p class="text-gray-500 text-xs leading-relaxed">Model performs best in daylight or overcast conditions. Avoid harsh shadows directly across the ball if possible.</p>
+                    </div>
+                </div>
+                <div class="bg-navy-950 border border-navy-700 p-6 rounded-xl flex gap-4">
+                    <i class="ph ph-hand-palm text-2xl text-cyan/70"></i>
+                    <div>
+                        <h4 class="font-mono text-white font-bold text-sm mb-1">Device Stability</h4>
+                        <p class="text-gray-500 text-xs leading-relaxed">Excessive movement during the 0.2s inference scan may reduce confidence interval. Hold briefly after alignment.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <footer class="bg-navy-950 border-t border-navy-800 py-12 relative z-10">
+        <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div class="flex items-center gap-2 opacity-50 hover:opacity-100 transition-opacity">
+                <i class="ph ph-brain text-white text-xl"></i>
+                <span class="font-mono font-bold text-white">GLA_NEURAL // DOCS</span>
+            </div>
+            <div class="text-gray-600 text-xs font-mono">
+                &copy; 2025 GOLF LIE ANALYZER. ALL RIGHTS RESERVED.
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>

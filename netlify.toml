@@ -1,0 +1,32 @@
+[build]
+  publish = "."
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# ── Scheduled function schedules (backup — in-code config takes precedence) ──
+[functions."site-monitor-background"]
+  schedule = "@hourly"
+
+[functions."link-checker-background"]
+  schedule = "0 7 * * *"
+
+[functions."waitlist-digest-background"]
+  schedule = "0 8 * * *"
+
+# ── Security headers ──────────────────────────────────────────────────────────
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+# ── Redirect www → apex ───────────────────────────────────────────────────────
+[[redirects]]
+  from = "https://www.lieanalyzer.com/*"
+  to   = "https://lieanalyzer.com/:splat"
+  status = 301
+  force  = true

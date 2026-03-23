@@ -1,0 +1,191 @@
+<!--
+  GLA WEBSITE — CORRECTED CONTENT BLOCKS
+  Version: Week 3 Close / Week 4 Entry
+  Date: March 21, 2026
+  
+  INSTRUCTIONS FOR WEBSITE PROJECT:
+  These are drop-in replacements for the sections of index.html that contain
+  factual inaccuracies. The Neural aesthetic (fonts, colors, spacing) is preserved.
+  Replace each marked section in the live index.html with the block below.
+  
+  SECTIONS COVERED:
+  1. Hero tagline (remove physics engine claim)
+  2. SYSTEM_ARCHITECTURE — 3-card section (replace Physics Engine card)
+  3. Decorative hero stats panel (replace fictional NODES/LATENCY)
+  4. SPECS table — Inference Stack + Advice Engine rows
+  5. Copyright footer
+-->
+
+
+<!-- ============================================================
+  BLOCK 1 — HERO TAGLINE
+  Replace the paragraph starting "Computer vision reads your lie..."
+  ============================================================ -->
+
+<p>
+  Computer vision reads your lie. A Claude-powered caddie engine synthesizes
+  lie class, distance, wind, and your skill level into a single,
+  actionable recommendation — adapted to the shot in front of you.
+  And you get <strong>caddie-grade advice</strong> — adapted to your skill level,
+  your distance, and the conditions in front of you.
+</p>
+
+
+<!-- ============================================================
+  BLOCK 2 — HERO STATS PANEL
+  Replace the decorative stat badges (NODES: 4,096 / LATENCY: 12ms)
+  These appear in the floating image card in the hero section.
+  ============================================================ -->
+
+<div class="absolute top-8 right-8 flex flex-col items-end font-mono text-[10px] text-cyan space-y-1 z-20">
+  <span class="bg-navy-950/80 px-2 py-1 rounded border border-cyan/30">ACCURACY: 90.8%</span>
+  <span class="bg-navy-950/80 px-2 py-1 rounded border border-cyan/30">CLASSES: 12</span>
+</div>
+
+
+<!-- ============================================================
+  BLOCK 3 — SYSTEM_ARCHITECTURE (3-card section)
+  Replace the entire capabilities section (id="capabilities")
+  Removes PHYSICS_ENGINE card, replaces with ADVICE_ENGINE card.
+  Adds AUTONOMOUS_PIPELINE card.
+  ============================================================ -->
+
+<section id="capabilities" class="py-24 border-t border-navy-800 bg-navy-900/50">
+  <div class="max-w-7xl mx-auto px-6 grid md:grid-cols-3 gap-6">
+
+    <!-- Card 01 — Computer Vision (unchanged, already accurate) -->
+    <div class="p-8 bg-navy-800/40 border border-navy-700 hover:border-cyan transition-all rounded-xl">
+      <i class="ph ph-eye text-3xl text-cyan mb-6"></i>
+      <h4 class="text-xl font-bold text-white mb-3 font-mono">COMPUTER_VISION</h4>
+      <p class="text-gray-400 text-sm">
+        MobileNetV3Small TFLite model classifies 12 distinct lie types — from tight fairway 
+        to plugged bunker — with confidence scoring per detection. Rough-medium was deliberately 
+        excluded; GLA detects rough and deep rough only, where visual differentiation is reliable. 
+        Trained on a proprietary dataset of real-world turf interaction images.
+      </p>
+    </div>
+
+    <!-- Card 02 — Advice Engine (REPLACES Physics Engine) -->
+    <div class="p-8 bg-navy-800/40 border border-navy-700 hover:border-cyan transition-all rounded-xl">
+      <i class="ph ph-brain text-3xl text-cyan mb-6"></i>
+      <h4 class="text-xl font-bold text-white mb-3 font-mono">ADVICE_ENGINE</h4>
+      <p class="text-gray-400 text-sm">
+        Claude Sonnet synthesizes lie class, confidence tier, GPS distance, wind conditions, 
+        and player skill level into a single executable caddie recommendation. Ball position, 
+        weight distribution, club selection, and shot shape — all derived from what the 
+        turf is actually doing to the ball.
+      </p>
+    </div>
+
+    <!-- Card 03 — Autonomous Pipeline (NEW — replaces generic Adaptive Advice) -->
+    <div class="p-8 bg-navy-800/40 border border-navy-700 hover:border-cyan transition-all rounded-xl">
+      <i class="ph ph-git-branch text-3xl text-cyan mb-6"></i>
+      <h4 class="text-xl font-bold text-white mb-3 font-mono">AUTONOMOUS_PIPELINE</h4>
+      <p class="text-gray-400 text-sm">
+        A dedicated edge device runs the TrainClaw pipeline — autonomous dataset validation, 
+        Vertex AI training jobs, and CI/CD deployment to Cloud Run. Every beta image that 
+        enters the system is validated, labeled, and fed back into the next training run 
+        without manual intervention.
+      </p>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ============================================================
+  BLOCK 4 — SPECS TABLE: INFERENCE_STACK section
+  Replace the INFERENCE_STACK rows in the TECHNICAL_SPECIFICATIONS section.
+  ============================================================ -->
+
+<!-- INFERENCE_STACK rows (inside existing specs table structure) -->
+<div>Deployment</div><div>Server-side</div>
+<div>Infrastructure</div><div>GCP Cloud Run</div>
+<div>Advice engine</div><div>Claude Sonnet (LLM)</div>
+<div>Image handling</div><div>Retained for model training</div>
+<div>PII attached</div><div>None — images are anonymous</div>
+<div>Training use</div><div>Lie classification dataset improvement</div>
+<div>Data sold / shared</div><div>Never</div>
+
+
+<!-- ============================================================
+  BLOCK 5 — SPECS TABLE: ADVICE_ENGINE rows
+  Replace physics modeling row.
+  ============================================================ -->
+
+<!-- ADVICE_ENGINE rows — replace "Physics modeling" row -->
+<div>Core inputs</div><div>Lie class, severity, distance, skill</div>
+<div>Ball position</div><div>Derived per lie type</div>
+<div>Neutral setup</div><div>Ball center, 50% / 50% weight</div>
+<div>Weight distribution</div><div>Lie-specific split (e.g. 60F / 40B)</div>
+<div>Optional inputs</div><div>Club selection, wind</div>
+<div>Skill tiers</div><div>3</div>
+<div>Advice generation</div><div>Claude Sonnet — natural language caddie output</div>
+<div>Wind integration</div><div>Weather API (live)</div>
+
+
+<!-- ============================================================
+  BLOCK 6 — HERO SECTION: Sub-headline description
+  Replace the edge computing / physics engine description paragraph
+  in the hero section (the italic paragraph below the main headline).
+  ============================================================ -->
+
+<p class="text-lg text-gray-400 mb-8 max-w-lg border-l-2 border-navy-700 pl-6">
+  Server-side computer vision classifies 12 lie types in real time. 
+  A Claude-powered caddie engine delivers skill-adaptive advice — 
+  lie class, GPS distance, wind, and your profile synthesized into 
+  one confident, executable plan.
+</p>
+
+
+<!-- ============================================================
+  BLOCK 7 — COMPETITIVE ADVANTAGE TABLE
+  Add "Physics modeling" row correction — remove from GLA column,
+  replace with actual differentiator.
+  ============================================================ -->
+
+<!-- Replace the Physics modeling row in GLA_VS_THE_FIELD table -->
+<!-- REMOVE: Physics modeling — ✗ | ✓Launch + spin engine -->
+<!-- ADD: -->
+<tr>
+  <td>AI caddie advice — ✗</td>
+  <td>✓ Claude-powered natural language advice</td>
+</tr>
+
+
+<!-- ============================================================
+  BLOCK 8 — FOOTER COPYRIGHT
+  Replace © 2025 with © 2026
+  ============================================================ -->
+
+<footer class="bg-navy-950 border-t border-navy-800 py-12 text-center text-gray-600 text-xs font-mono">
+  © 2026 GOLF LIE ANALYZER. ALL RIGHTS RESERVED.
+</footer>
+
+
+<!-- ============================================================
+  OPTIONAL BLOCK 9 — TRAINCLAW DIFFERENTIATOR PARAGRAPH
+  Add this to the DATA_FLYWHEEL section or as a standalone section
+  between DATA_FLYWHEEL and REQUEST_ACCESS. Positions GLA as
+  seriously engineered — a genuine differentiator.
+  ============================================================ -->
+
+<section class="py-16 border-t border-navy-800 bg-navy-950">
+  <div class="max-w-4xl mx-auto px-6">
+    <div class="font-mono text-xs text-cyan tracking-widest mb-4">AUTONOMOUS_INFRASTRUCTURE</div>
+    <h2 class="text-2xl font-bold text-white mb-6">THE PIPELINE NEVER SLEEPS.</h2>
+    <p class="text-gray-400 leading-relaxed mb-4">
+      Most AI apps are static — trained once, deployed, forgotten. GLA runs a fully autonomous 
+      retraining pipeline on dedicated edge hardware. Every night, DataClaw validates the 
+      training dataset. Every beta image that passes quality checks is labeled and staged. 
+      When F1 thresholds are met, TrainClaw submits a new Vertex AI training job, 
+      evaluates the result, and deploys the winning model to Cloud Run automatically.
+    </p>
+    <p class="text-gray-400 leading-relaxed">
+      This is the same discipline applied to Defense & Aerospace program delivery — 
+      continuous validation, zero-defect criteria, automated gatekeeping — applied to 
+      a 12-class golf lie classifier. <strong class="text-white">Beta users don't just test the product. 
+      They feed the pipeline.</strong>
+    </p>
+  </div>
+</section>

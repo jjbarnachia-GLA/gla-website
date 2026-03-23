@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Golf Lie Analyzer | AI-Powered Turf Analytics</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navy: {
+                            950: '#020617', // Deepest Black/Blue
+                            900: '#0B1120', // Main BG
+                            800: '#1e293b', // Card BG
+                            700: '#334155', // Borders
+                        },
+                        cyan: {
+                            DEFAULT: '#00F0FF', // The "Neural" Electric Blue
+                            dim: 'rgba(0, 240, 255, 0.1)',
+                            glow: 'rgba(0, 240, 255, 0.5)',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    backgroundImage: {
+                        'grid-pattern': "radial-gradient(circle, #1e293b 1px, transparent 1px)",
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                        'scan': 'scan 3s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        },
+                        scan: {
+                            '0%, 100%': { top: '0%' },
+                            '50%': { top: '100%' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Glassmorphism & Glow Effects */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .neural-glow {
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.15);
+        }
+
+        /* "Node" corners for the images */
+        .node-border {
+            position: relative;
+        }
+        .node-border::before, .node-border::after {
+            content: '';
+            position: absolute;
+            width: 8px; 
+            height: 8px;
+            background: #00F0FF;
+            border-radius: 50%; 
+            box-shadow: 0 0 10px #00F0FF;
+            z-index: 20;
+        }
+        .node-border::before { top: -4px; left: -4px; }
+        .node-border::after { bottom: -4px; right: -4px; }
+    </style>
+</head>
+<body class="bg-navy-950 text-gray-300 font-sans antialiased selection:bg-cyan selection:text-navy-950">
+
+    <div class="fixed inset-0 bg-grid-pattern bg-[size:30px_30px] opacity-20 pointer-events-none z-0"></div>
+    <div class="fixed top-0 left-0 w-full h-full bg-gradient-to-b from-navy-950 via-transparent to-navy-950 z-0 pointer-events-none"></div>
+
+    <nav class="fixed w-full z-50 top-0 border-b border-navy-700/50 bg-navy-950/80 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <i class="ph ph-brain text-cyan text-xl"></i>
+                <span class="font-mono font-bold text-white tracking-tighter">GLA<span class="text-cyan">_NEURAL</span></span>
+            </div>
+            <div class="hidden md:flex items-center gap-8 font-mono text-sm tracking-wide">
+                <a href="#capabilities" class="hover:text-cyan transition-colors">MODEL_ARCH</a>
+                <a href="#protocol" class="hover:text-cyan transition-colors">PROTOCOL</a>
+                <a href="#mission" class="hover:text-cyan transition-colors">FOUNDER</a>
+                <a href="instructions.html" class="text-cyan hover:text-white transition-colors border-b border-cyan/30">FIELD_GUIDE</a>
+            </div>
+            <a href="#beta" class="font-mono text-xs font-bold bg-cyan/10 text-cyan border border-cyan/50 px-4 py-2 hover:bg-cyan hover:text-navy-950 transition-all duration-300 shadow-[0_0_15px_rgba(0,240,255,0.2)]">
+                [ ACCESS_BETA ]
+            </a>
+        </div>
+    </nav>
+
+    <section class="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
+        <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center relative z-10">
+            
+            <div>
+                <div class="inline-flex items-center gap-3 px-3 py-1 border border-cyan/30 bg-cyan/5 rounded-full mb-8">
+                    <span class="relative flex h-2 w-2">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-2 w-2 bg-cyan"></span>
+                    </span>
+                    <span class="font-mono text-xs text-cyan tracking-widest">NEURAL NETWORK ACTIVE // V 1.0</span>
+                </div>
+                
+                <h1 class="text-5xl lg:text-7xl font-bold text-white leading-tight mb-6 tracking-tight">
+                    DECODE THE<br>
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan to-blue-600 neural-glow">COMPLEXITY.</span>
+                </h1>
+                
+                <p class="text-lg text-gray-400 mb-8 max-w-lg leading-relaxed border-l-2 border-navy-700 pl-6">
+                    Bridging technical innovation and compliance. We use edge-based computer vision to analyze turf interaction, spin decay, and lie severity in real-time.
+                </p>
+                
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <a href="#beta" class="group relative px-8 py-4 bg-cyan text-navy-950 font-mono font-bold tracking-wide hover:bg-white transition-all text-center inline-block shadow-[0_0_20px_rgba(0,240,255,0.4)]">
+                        <span class="relative z-10">INITIALIZE_MODEL ></span>
+                    </a>
+                    <a href="instructions.html" class="px-8 py-4 border border-navy-700 text-gray-300 font-mono font-bold tracking-wide hover:border-cyan hover:text-cyan transition-all text-center inline-block">
+                        VIEW_PROTOCOL
+                    </a>
+                </div>
+            </div>
+
+            <div class="relative group animate-float">
+                <div class="absolute inset-0 bg-cyan/20 blur-[80px] rounded-full"></div>
+                
+                <div class="relative aspect-square rounded-2xl overflow-hidden border border-navy-700 node-border bg-navy-900 shadow-2xl">
+                    
+                    <img src="neural-ball.PNG" 
+                         alt="Neural Network Golf Ball Analysis" 
+                         class="object-cover w-full h-full">
+                    
+                    <div class="absolute inset-x-0 h-0.5 bg-cyan/50 shadow-[0_0_15px_#00F0FF] animate-scan opacity-70 z-10"></div>
+                    
+                    <div class="absolute top-8 right-8 flex flex-col items-end font-mono text-[10px] text-cyan space-y-1 z-20">
+                        <span class="bg-navy-950/80 px-2 py-1 rounded border border-cyan/30">NODES: 4,096</span>
+                        <span class="bg-navy-950/80 px-2 py-1 rounded border border-cyan/30">LATENCY: 12ms</span>
+                    </div>
+
+                    <div class="absolute bottom-0 inset-x-0 p-6 bg-gradient-to-t from-navy-950 to-transparent z-20">
+                        <div class="flex items-end justify-between">
+                            <div>
+                                <p class="font-mono text-xs text-gray-400 mb-1">PREDICTED SPIN RATE</p>
+                                <div class="flex items-baseline gap-2">
+                                    <span class="text-3xl font-bold text-white">2,450</span>
+                                    <span class="text-xs text-cyan">RPM</span>
+                                </div>
+                            </div>
+                            <div class="flex gap-1 h-8 items-end">
+                                <div class="w-1 bg-cyan animate-[pulse_1s_ease-in-out_infinite] h-4"></div>
+                                <div class="w-1 bg-cyan animate-[pulse_1.5s_ease-in-out_infinite] h-8"></div>
+                                <div class="w-1 bg-cyan animate-[pulse_1.2s_ease-in-out_infinite] h-6"></div>
+                                <div class="w-1 bg-cyan animate-[pulse_0.8s_ease-in-out_infinite] h-3"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="capabilities" class="py-24 border-t border-navy-800 bg-navy-900/50 relative">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="mb-16">
+                <h2 class="font-mono text-cyan text-sm mb-4 tracking-widest">/// SYSTEM_ARCHITECTURE</h2>
+                <h3 class="text-3xl font-bold text-white">PRECISION ENGINEERING</h3>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-6">
+                <div class="p-8 bg-navy-800/40 border border-navy-700 hover:border-cyan hover:shadow-[0_0_20px_rgba(0,240,255,0.1)] transition-all group rounded-xl">
+                    <i class="ph ph-eye text-3xl text-cyan mb-6"></i>
+                    <h4 class="text-xl font-bold text-white mb-3 font-mono">COMPUTER VISION</h4>
+                    <p class="text-gray-400 text-sm leading-relaxed">
+                        YOLOv8 architecture trained on a proprietary dataset of 15,000+ complex lie interactions.
+                    </p>
+                </div>
+
+                <div class="p-8 bg-navy-800/40 border border-navy-700 hover:border-cyan hover:shadow-[0_0_20px_rgba(0,240,255,0.1)] transition-all group rounded-xl">
+                    <i class="ph ph-cpu text-3xl text-cyan mb-6"></i>
+                    <h4 class="text-xl font-bold text-white mb-3 font-mono">EDGE COMPUTING</h4>
+                    <p class="text-gray-400 text-sm leading-relaxed">
+                        Zero-latency inference. The neural engine runs entirely on your device's NPU, not the cloud.
+                    </p>
+                </div>
+
+                <div class="p-8 bg-navy-800/40 border border-navy-700 hover:border-cyan hover:shadow-[0_0_20px_rgba(0,240,255,0.1)] transition-all group rounded-xl">
+                    <i class="ph ph-function text-3xl text-cyan mb-6"></i>
+                    <h4 class="text-xl font-bold text-white mb-3 font-mono">PHYSICS ENGINE</h4>
+                    <p class="text-gray-400 text-sm leading-relaxed">
+                        Real-time calculation of launch angle variance and spin decay based on grass density.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="protocol" class="py-24 border-t border-navy-800 bg-navy-900 relative overflow-hidden">
+        <div class="absolute inset-0 bg-cyan/5 blur-[100px] opacity-30 pointer-events-none"></div>
+ 
+        <div class="max-w-7xl mx-auto px-6 relative z-10">
+            <div class="mb-16 text-center">
+                 <h2 class="font-mono text-cyan text-sm mb-4 tracking-widest">/// OPERATIONAL_PROTOCOL</h2>
+                 <h3 class="text-3xl md:text-4xl font-bold text-white">TARGET ACQUISITION SYSTEM</h3>
+                 <p class="text-gray-400 mt-4 max-w-2xl mx-auto">
+                     Neural-guided ranging ensures optimal data fidelity before scan initiation.
+                 </p>
+            </div>
+ 
+            <div class="relative rounded-2xl overflow-hidden border border-navy-700 node-border shadow-2xl mb-12">
+                <img src="targeting-sequence-dark.jpg" alt="GLA Target Acquisition Sequence - Red Yellow Green" class="w-full h-auto">
+                <div class="absolute inset-0 bg-grid-pattern opacity-10 mix-blend-overlay pt-1"></div>
+            </div>
+ 
+            <div class="grid md:grid-cols-3 gap-8 text-center relative">
+                <div class="hidden md:block absolute top-12 left-1/4 right-1/4 h-px bg-gradient-to-r from-red-900 via-yellow-900 to-green-900 z-0 opacity-50"></div>
+ 
+                <div class="relative z-10 p-6 bg-navy-950/80 border border-navy-800 rounded-xl hover:border-red-900/50 transition-colors">
+                    <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-500/10 border border-red-500/50 text-red-500 mb-4 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+                        <i class="ph ph-crosshair-simple text-xl"></i>
+                    </div>
+                    <h4 class="font-mono font-bold text-white mb-2">STAGE 1: SEARCH</h4>
+                    <p class="text-sm text-gray-400 font-mono leading-relaxed">Neural net scans FOV for golf ball signature. Ranging unavailable due to distance.</p>
+                </div>
+ 
+                <div class="relative z-10 p-6 bg-navy-950/80 border border-navy-800 rounded-xl hover:border-yellow-900/50 transition-colors">
+                    <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-yellow-500/10 border border-yellow-500/50 text-yellow-500 mb-4 shadow-[0_0_15px_rgba(234,179,8,0.2)]">
+                        <i class="ph ph-radar text-xl"></i>
+                    </div>
+                    <h4 class="font-mono font-bold text-white mb-2">STAGE 2: ACQUIRE</h4>
+                    <p class="text-sm text-gray-400 font-mono leading-relaxed">Target identified. Dynamic ranging active. Guidance advises closer proximity for fidelity.</p>
+                </div>
+ 
+                <div class="relative z-10 p-6 bg-navy-950/80 border border-navy-800 rounded-xl hover:border-green-900/50 transition-colors">
+                    <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-500/10 border border-green-500/50 text-green-500 mb-4 shadow-[0_0_15px_rgba(34,197,94,0.2)]">
+                        <i class="ph ph-target text-xl"></i>
+                    </div>
+                    <h4 class="font-mono font-bold text-white mb-2">STAGE 3: LOCK</h4>
+                    <p class="text-sm text-gray-400 font-mono leading-relaxed">Optimal distance achieved (12-24"). Data fidelity maximized. Scan authorized.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="mission" class="py-24 border-t border-navy-800 bg-navy-950 relative">
+        <div class="max-w-4xl mx-auto px-6 grid md:grid-cols-[200px_1fr] gap-10 items-center">
+            
+            <div class="relative group">
+                <div class="absolute inset-0 bg-cyan/20 blur-md rounded-xl group-hover:bg-cyan/30 transition-all"></div>
+                <img src="johnny_headshot.png" alt="Johnny - Founder" 
+                     class="relative w-full rounded-xl border border-navy-700 grayscale hover:grayscale-0 transition-all duration-500 shadow-2xl">
+                
+                <div class="absolute bottom-3 left-3 bg-navy-950/90 px-3 py-1 border border-cyan/30 rounded text-[10px] font-mono text-cyan">
+                    ID: FOUNDER
+                </div>
+            </div>
+
+            <div>
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="h-px w-12 bg-cyan"></span>
+                    <h3 class="font-mono text-cyan text-sm tracking-widest uppercase">Program Manager // Solo Founder</h3>
+                </div>
+                <h2 class="text-3xl font-bold text-white mb-4">ENGINEERED. NOT JUST CODED.</h2>
+                <p class="text-gray-400 mb-6 leading-relaxed">
+                    "I am a Defense & Aerospace Program Manager by trade. I spend my days bridging technical innovation with federal compliance. I built GLA because I wanted the same level of data-driven situational awareness I use at work, applied to the most difficult shots in golf."
+                </p>
+                
+                <div class="flex flex-wrap gap-2 font-mono text-xs text-cyan">
+                    <span class="px-3 py-1 border border-navy-700 rounded bg-navy-900">MBA</span>
+                    <span class="px-3 py-1 border border-navy-700 rounded bg-navy-900">PMP®</span>
+                    <span class="px-3 py-1 border border-navy-700 rounded bg-navy-900">LSSBB</span>
+                    <span class="px-3 py-1 border border-navy-700 rounded bg-navy-900">DEFENSE_SECTOR</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="beta" class="py-20 bg-gradient-to-br from-cyan/10 to-navy-900 border-t border-cyan/20">
+        <div class="max-w-5xl mx-auto px-6">
+            <div class="bg-navy-950 border border-navy-700 rounded-2xl p-8 md:p-12 shadow-2xl relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-64 h-64 bg-cyan/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+
+                <div class="grid md:grid-cols-2 gap-12 relative z-10">
+                    <div>
+                        <h2 class="text-2xl font-bold text-white mb-4">REQUEST ACCESS</h2>
+                        <p class="text-gray-400 mb-8 text-sm">
+                            Validation Phase 1 is active. Access is restricted to build diverse turf data. Priority given to LiDAR-enabled iOS devices in target regions.
+                        </p>
+                        
+                        <form name="beta-waitlist" method="POST" data-netlify="true" class="space-y-4">
+                            
+                            <div>
+                                <label for="email" class="sr-only">Email</label>
+                                <input type="email" name="email" id="email" placeholder="ENTER_EMAIL_ADDRESS" required
+                                       class="w-full bg-navy-900 border border-navy-700 px-4 py-3 text-white font-mono focus:border-cyan focus:outline-none focus:ring-1 focus:ring-cyan rounded placeholder-navy-700">
+                            </div>
+
+                            <div>
+                                <label for="location" class="sr-only">Location</label>
+                                <input type="text" name="location" id="location" placeholder="LOCATION (e.g., Florida, UK)" required
+                                       class="w-full bg-navy-900 border border-navy-700 px-4 py-3 text-white font-mono focus:border-cyan focus:outline-none focus:ring-1 focus:ring-cyan rounded placeholder-navy-700">
+                            </div>
+
+                            <button type="submit" class="w-full bg-cyan text-navy-950 font-bold py-3 rounded hover:bg-white transition-colors font-mono shadow-[0_0_15px_rgba(0,240,255,0.3)]">
+                                [ JOIN_WAITLIST ]
+                            </button>
+                        </form>
+
+                    </div>
+
+                    <div class="border-l border-navy-800 pl-0 md:pl-12 pt-8 md:pt-0">
+                        <div class="flex items-center gap-2 mb-6">
+                            <i class="ph ph-shield-check text-cyan text-xl"></i>
+                            <h3 class="font-mono text-white font-bold">DATA_PROTOCOL</h3>
+                        </div>
+                        
+                        <div class="space-y-6">
+                            <div>
+                                <h4 class="text-white text-xs font-bold font-mono uppercase mb-1">Local Inference</h4>
+                                <p class="text-gray-500 text-xs">Processing occurs locally on-device. No images are uploaded to the cloud.</p>
+                            </div>
+                            <div>
+                                <h4 class="text-white text-xs font-bold font-mono uppercase mb-1">Zero Retention</h4>
+                                <p class="text-gray-500 text-xs">Image data is analyzed in RAM and instantly discarded post-analysis.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-navy-950 border-t border-navy-800 py-12">
+        <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div class="flex items-center gap-2 opacity-50 hover:opacity-100 transition-opacity">
+                <i class="ph ph-brain text-white text-xl"></i>
+                <span class="font-mono font-bold text-white">GLA_NEURAL</span>
+            </div>
+            <div class="flex gap-6">
+                 <a href="instructions.html" class="text-gray-600 hover:text-cyan text-xs font-mono transition-colors">FIELD_GUIDE</a>
+                 <span class="text-gray-600 text-xs font-mono">&copy; 2025 GOLF LIE ANALYZER.</span>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>
