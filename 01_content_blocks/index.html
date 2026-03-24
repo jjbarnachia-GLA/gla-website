@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Golf Lie Analyzer | AI Caddie for Every Golfer</title>
-  <meta name="description" content="The first AI caddie that reads your lie. Computer vision analyzes turf conditions, physics engine models the shot, and you get expert advice — tailored to your game." />
+  <meta name="description" content="The first AI caddie that reads your lie. Computer vision classifies 12 lie types. A Claude-powered caddie engine synthesizes lie class, distance, wind, and skill into one actionable recommendation." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet" />
@@ -740,7 +740,9 @@
         <p class="hero-sub">
           Every golfer has stood over a bad lie and <strong>guessed</strong>.<br>
           GLA ends the guesswork. Point. Analyze. Execute.<br><br>
-          Computer vision reads your lie. A physics engine models the shot.
+          Computer vision reads your lie. A Claude-powered caddie engine synthesizes
+          lie class, distance, wind, and your skill level into a single,
+          actionable recommendation.
           And you get <strong>caddie-grade advice</strong> — adapted to your skill level,
           your distance, and the conditions in front of you.
         </p>
@@ -855,8 +857,8 @@
             <div class="compare-cell us"><span class="check">✓</span>Skill-adaptive advice</div>
           </div>
           <div class="compare-row">
-            <div class="compare-cell them" style="color:var(--text-dim); font-style:italic;">Physics modeling — ✗</div>
-            <div class="compare-cell us"><span class="check">✓</span>Launch + spin engine</div>
+            <div class="compare-cell them" style="color:var(--text-dim); font-style:italic;">AI caddie advice — ✗</div>
+            <div class="compare-cell us"><span class="check">✓</span>Claude-powered natural language advice</div>
           </div>
         </div>
       </div>
@@ -884,14 +886,14 @@
       <div class="cap-card">
         <div class="cap-num">02</div>
         <div class="cap-icon">◉</div>
-        <h3>PHYSICS_ENGINE</h3>
-        <p>Real-time modeling of launch angle variance, spin decay, and trajectory shift based on detected grass type, density, and lie severity. Your expected carry and roll-out adjust automatically to the conditions.</p>
+        <h3>ADVICE_ENGINE</h3>
+        <p>Claude Sonnet synthesizes lie class, confidence tier, GPS distance, wind conditions, and player skill level into a single executable caddie recommendation. Ball position, weight distribution, club selection, and shot shape — all derived from what the turf is actually doing to the ball.</p>
       </div>
       <div class="cap-card">
         <div class="cap-num">03</div>
         <div class="cap-icon">◎</div>
-        <h3>ADAPTIVE_ADVICE</h3>
-        <p>The advice layer synthesizes lie class, distance, club selection, wind, and your skill tier into a single, actionable recommendation. Beginners get technique. Experts get data. Everyone gets confidence.</p>
+        <h3>AUTONOMOUS_PIPELINE</h3>
+        <p>A dedicated edge device runs the TrainClaw pipeline — autonomous dataset validation, Vertex AI training jobs, and CI/CD deployment to Cloud Run. Every beta image that enters the system is validated, labeled, and fed back into the next training run without manual intervention.</p>
       </div>
     </div>
   </div>
@@ -1033,8 +1035,8 @@
           </p>
           <p>
             <strong>Distance anchors club selection.</strong> In scoring range, GLA targets the pin.
-            In layup range, it finds the optimal position for the next shot. The physics engine
-            adjusts expected carry based on lie severity before any club recommendation is made.
+            In layup range, it finds the optimal position for the next shot. Carry expectations
+            adjust based on lie severity before any club recommendation is made.
           </p>
           <p>
             <strong>Skill tier changes the voice, not the intelligence.</strong> The same 12-class
@@ -1668,8 +1670,8 @@
         <div class="spec-row"><span class="sk">Weight distribution</span><span class="sv">Lie-specific split (e.g. 60F / 40B)</span></div>
         <div class="spec-row"><span class="sk">Optional inputs</span><span class="sv">Club selection, wind</span></div>
         <div class="spec-row"><span class="sk">Skill tiers</span><span class="sv hi">3</span></div>
-        <div class="spec-row"><span class="sk">Physics modeling</span><span class="sv">Launch angle, spin decay</span></div>
-        <div class="spec-row"><span class="sk">Wind integration</span><span class="sv">Weather API (Phase 2)</span></div>
+        <div class="spec-row"><span class="sk">Advice generation</span><span class="sv hi">Claude Sonnet — natural language caddie output</span></div>
+        <div class="spec-row"><span class="sk">Wind integration</span><span class="sv">Weather API (live)</span></div>
       </div>
       <div class="spec-block">
         <h4>PLATFORM_STATUS</h4>
@@ -1744,6 +1746,31 @@
 </section>
 
 <!-- ══════════════════════════════════════════
+     AUTONOMOUS INFRASTRUCTURE
+══════════════════════════════════════════ -->
+<section id="autonomous-infra" style="background:var(--bg2); border-top:1px solid var(--border); padding:60px 0;">
+  <div class="container" style="max-width:800px;">
+    <div class="section-label">AUTONOMOUS_INFRASTRUCTURE</div>
+    <h2 style="font-family:var(--display); font-size:clamp(20px,2.8vw,30px); font-weight:700; letter-spacing:0.06em; color:var(--text-hi); margin-bottom:16px; line-height:1.15;">
+      THE PIPELINE NEVER SLEEPS.
+    </h2>
+    <p style="font-size:13px; line-height:1.9; color:var(--text); margin-bottom:14px;">
+      Most AI apps are static — trained once, deployed, forgotten. GLA runs a fully autonomous
+      retraining pipeline on dedicated edge hardware. Every night, DataClaw validates the
+      training dataset. Every beta image that passes quality checks is labeled and staged.
+      When F1 thresholds are met, TrainClaw submits a new Vertex AI training job,
+      evaluates the result, and deploys the winning model to Cloud Run automatically.
+    </p>
+    <p style="font-size:13px; line-height:1.9; color:var(--text);">
+      This is the same discipline applied to Defense &amp; Aerospace program delivery —
+      continuous validation, zero-defect criteria, automated gatekeeping — applied to
+      a 12-class golf lie classifier. <strong style="color:var(--text-hi);">Beta users don't just test the product.
+      They feed the pipeline.</strong>
+    </p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
      BETA CTA
 ══════════════════════════════════════════ -->
 <section id="beta">
@@ -1795,7 +1822,7 @@
 <footer>
   <div class="footer-inner">
     <span class="footer-logo">GLA_NEURAL</span>
-    <span class="footer-copy">© 2025 GOLF LIE ANALYZER. ALL RIGHTS RESERVED.</span>
+    <span class="footer-copy">© 2026 GOLF LIE ANALYZER. ALL RIGHTS RESERVED.</span>
   </div>
 </footer>
 

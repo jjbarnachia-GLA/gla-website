@@ -1,0 +1,1871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Golf Lie Analyzer | Read Every Lie. Hit Every Shot.</title>
+  <meta name="description" content="AI-powered golf lie analysis. Know your turf, calculate your shot, play with confidence. Join the beta." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ─── TOKENS ──────────────────────────────────── */
+    :root {
+      --bg:         #0b0e0b;
+      --bg2:        #111611;
+      --bg3:        #161d16;
+      --glass:      rgba(255,255,255,.04);
+      --glass-h:    rgba(255,255,255,.07);
+      --border:     rgba(255,255,255,.08);
+      --border-g:   rgba(94,163,76,.25);
+      --green:      #5ea34c;
+      --green-l:    #7ec96a;
+      --green-g:    rgba(94,163,76,.1);
+      --green-gg:   rgba(94,163,76,.05);
+      --gold:       #c9a84c;
+      --gold-g:     rgba(201,168,76,.08);
+      --text:       #e8ede8;
+      --muted:      rgba(232,237,232,.5);
+      --muted2:     rgba(232,237,232,.28);
+      --danger:     #e05c5c;
+      --ease-expo:  cubic-bezier(0.16,1,0.3,1);
+      --sans:       'DM Sans', sans-serif;
+      --mono:       'DM Mono', monospace;
+      --display:    'Bebas Neue', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.65;
+      overflow-x: hidden;
+    }
+
+    /* ── Ambient background glow ─────────────────── */
+    .bg-ambient {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .bg-ambient::before {
+      content: '';
+      position: absolute;
+      width: 900px; height: 900px;
+      top: -200px; right: -200px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(94,163,76,.07) 0%, transparent 70%);
+      animation: ambientDrift 20s ease-in-out infinite alternate;
+    }
+
+    .bg-ambient::after {
+      content: '';
+      position: absolute;
+      width: 700px; height: 700px;
+      bottom: -100px; left: -100px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(201,168,76,.05) 0%, transparent 70%);
+      animation: ambientDrift 28s ease-in-out infinite alternate-reverse;
+    }
+
+    @keyframes ambientDrift {
+      0%   { transform: translate(0,0) scale(1); }
+      100% { transform: translate(40px,-60px) scale(1.08); }
+    }
+
+    /* Grid line overlay */
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(94,163,76,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(94,163,76,.025) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%);
+    }
+
+    /* z-index stack */
+    nav, .hero, section, footer, .toast { position: relative; z-index: 1; }
+
+    /* ─── NAV ─────────────────────────────────────── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 200;
+      height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 48px;
+      background: rgba(11,14,11,.7);
+      backdrop-filter: blur(24px) saturate(1.5);
+      -webkit-backdrop-filter: blur(24px) saturate(1.5);
+      border-bottom: 1px solid var(--border);
+      transition: background .3s, border-color .3s;
+    }
+
+    nav.scrolled {
+      background: rgba(11,14,11,.92);
+      border-bottom-color: rgba(255,255,255,.12);
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .nav-logo-mark {
+      width: 32px; height: 32px;
+      border-radius: 6px;
+      background: var(--green);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .nav-logo-mark svg { width: 18px; height: 18px; fill: #0b0e0b; }
+
+    .nav-logo-text {
+      font-family: var(--display);
+      font-size: 20px;
+      letter-spacing: .06em;
+      color: var(--text);
+    }
+
+    .nav-logo-text span { color: var(--green-l); }
+
+    .nav-center {
+      display: flex;
+      gap: 8px;
+      list-style: none;
+    }
+
+    .nav-center a {
+      display: block;
+      padding: 6px 14px;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: .01em;
+      border-radius: 6px;
+      transition: color .2s, background .2s;
+    }
+
+    .nav-center a:hover,
+    .nav-center a.active {
+      color: var(--text);
+      background: var(--glass-h);
+    }
+
+    .btn-nav {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--green);
+      color: #0b0e0b;
+      padding: 10px 22px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      letter-spacing: .01em;
+      transition: background .2s, transform .15s, box-shadow .2s;
+    }
+
+    .btn-nav:hover {
+      background: var(--green-l);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px rgba(94,163,76,.3);
+    }
+
+    /* ─── SCROLL REVEAL ───────────────────────────── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity .7s var(--ease-expo), transform .7s var(--ease-expo);
+    }
+    .reveal.visible { opacity: 1; transform: none; }
+    .reveal-d1 { transition-delay: .08s; }
+    .reveal-d2 { transition-delay: .16s; }
+    .reveal-d3 { transition-delay: .24s; }
+    .reveal-d4 { transition-delay: .32s; }
+
+    /* ─── HERO ────────────────────────────────────── */
+    .hero {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-items: center;
+      gap: 0;
+      padding: 100px 48px 80px;
+      overflow: hidden;
+    }
+
+    .hero-left { max-width: 600px; }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--green-gg);
+      border: 1px solid var(--border-g);
+      border-radius: 100px;
+      padding: 6px 14px 6px 10px;
+      margin-bottom: 32px;
+    }
+
+    .hero-badge-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: livePulse 2s ease-in-out infinite;
+    }
+
+    @keyframes livePulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(94,163,76,.5); }
+      60%       { opacity: .7; box-shadow: 0 0 0 5px rgba(94,163,76,0); }
+    }
+
+    .hero-badge-text {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--green-l);
+      letter-spacing: .02em;
+    }
+
+    h1 {
+      font-family: var(--display);
+      font-size: clamp(3.8rem, 7vw, 6.5rem);
+      line-height: 1;
+      letter-spacing: .02em;
+      text-transform: uppercase;
+      color: var(--text);
+      margin-bottom: 24px;
+    }
+
+    h1 em {
+      font-style: normal;
+      color: var(--green-l);
+      display: block;
+    }
+
+    .hero-sub {
+      font-size: 17px;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 460px;
+      margin-bottom: 44px;
+      font-weight: 300;
+    }
+
+    .hero-sub strong { color: var(--text); font-weight: 500; }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 56px;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--green);
+      color: #0b0e0b;
+      padding: 16px 32px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      letter-spacing: .01em;
+      border: none;
+      cursor: pointer;
+      font-family: var(--sans);
+      position: relative;
+      overflow: hidden;
+      transition: background .2s, transform .15s, box-shadow .2s;
+    }
+
+    .btn-primary::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,.15) 0%, transparent 60%);
+      opacity: 0;
+      transition: opacity .2s;
+    }
+
+    .btn-primary:hover {
+      background: var(--green-l);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(94,163,76,.35);
+    }
+
+    .btn-primary:hover::before { opacity: 1; }
+    .btn-primary:active { transform: translateY(0); }
+
+    /* Ripple on click */
+    .btn-primary .ripple {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(0,0,0,.2);
+      width: 10px; height: 10px;
+      transform: scale(0);
+      animation: ripple .5s linear;
+      pointer-events: none;
+    }
+
+    @keyframes ripple {
+      to { transform: scale(30); opacity: 0; }
+    }
+
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: color .2s;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: var(--sans);
+    }
+
+    .btn-ghost:hover { color: var(--text); }
+
+    .btn-ghost svg { transition: transform .2s; }
+    .btn-ghost:hover svg { transform: translateX(3px); }
+
+    /* Stat pills */
+    .hero-stats {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .stat-pill {
+      display: flex;
+      flex-direction: column;
+      background: var(--glass);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 20px;
+      min-width: 120px;
+      transition: border-color .25s, background .25s;
+    }
+
+    .stat-pill:hover {
+      border-color: var(--border-g);
+      background: var(--green-gg);
+    }
+
+    .stat-val {
+      font-family: var(--mono);
+      font-size: 22px;
+      font-weight: 500;
+      color: var(--green-l);
+      line-height: 1.1;
+    }
+
+    .stat-lbl {
+      font-size: 11px;
+      color: var(--muted2);
+      margin-top: 3px;
+      letter-spacing: .02em;
+      font-weight: 500;
+    }
+
+    /* ─── HERO RIGHT: Mockup card ─────────────────── */
+    .hero-right {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      padding-left: 40px;
+    }
+
+    .app-mockup {
+      width: 320px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 40px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.06);
+      animation: mockupFloat 5s ease-in-out infinite;
+    }
+
+    @keyframes mockupFloat {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-10px); }
+    }
+
+    .mockup-header {
+      background: var(--bg3);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .mockup-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .mockup-badge {
+      font-size: 10px;
+      font-family: var(--mono);
+      background: var(--green-g);
+      color: var(--green-l);
+      border: 1px solid var(--border-g);
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+
+    .mockup-image-area {
+      height: 180px;
+      background: var(--bg3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Simulated turf gradient */
+    .mockup-turf {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        170deg,
+        #0d1f0d 0%,
+        #152815 35%,
+        #1a3d1a 60%,
+        #0f1f0f 100%
+      );
+    }
+
+    /* Scan line animation */
+    .mockup-scan {
+      position: absolute;
+      left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--green), transparent);
+      opacity: .8;
+      animation: scanLine 2.4s ease-in-out infinite;
+    }
+
+    @keyframes scanLine {
+      0%   { top: 10%; opacity: 0; }
+      10%  { opacity: .8; }
+      90%  { opacity: .8; }
+      100% { top: 90%; opacity: 0; }
+    }
+
+    /* Analysis overlay box */
+    .mockup-overlay-box {
+      position: absolute;
+      width: 96px; height: 64px;
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      border: 1.5px solid var(--green);
+      border-radius: 6px;
+      box-shadow: 0 0 0 1px rgba(94,163,76,.2), inset 0 0 20px rgba(94,163,76,.05);
+      animation: boxPulse 2.4s ease-in-out infinite;
+    }
+
+    @keyframes boxPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(94,163,76,.4), inset 0 0 20px rgba(94,163,76,.05); }
+      50%       { box-shadow: 0 0 0 8px rgba(94,163,76,0), inset 0 0 20px rgba(94,163,76,.08); }
+    }
+
+    /* Corner ticks on overlay box */
+    .mockup-overlay-box::before,
+    .mockup-overlay-box::after {
+      content: '';
+      position: absolute;
+      width: 10px; height: 10px;
+      border-color: var(--green-l);
+      border-style: solid;
+    }
+
+    .mockup-overlay-box::before {
+      top: -2px; left: -2px;
+      border-width: 2px 0 0 2px;
+      border-radius: 2px 0 0 0;
+    }
+
+    .mockup-overlay-box::after {
+      bottom: -2px; right: -2px;
+      border-width: 0 2px 2px 0;
+      border-radius: 0 0 2px 0;
+    }
+
+    .mockup-lie-label {
+      position: absolute;
+      top: 12px; left: 12px;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--green-l);
+      background: rgba(11,14,11,.8);
+      padding: 3px 7px;
+      border-radius: 4px;
+      border: 1px solid var(--border-g);
+    }
+
+    .mockup-conf {
+      position: absolute;
+      bottom: 10px; right: 10px;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--gold);
+      background: rgba(11,14,11,.8);
+      padding: 3px 7px;
+      border-radius: 4px;
+    }
+
+    .mockup-body {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .mockup-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .mockup-row-label {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .mockup-row-val {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .mockup-row-val.green { color: var(--green-l); }
+    .mockup-row-val.gold  { color: var(--gold); }
+
+    .mockup-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 4px 0;
+    }
+
+    .mockup-rec {
+      background: var(--green-gg);
+      border: 1px solid var(--border-g);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 12px;
+      color: var(--text);
+    }
+
+    .mockup-rec-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--green-l);
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    /* ─── SHARED SECTION ──────────────────────────── */
+    section {
+      padding: 100px 48px;
+    }
+
+    .section-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--green-l);
+      margin-bottom: 16px;
+    }
+
+    .section-eyebrow::before {
+      content: '';
+      display: block;
+      width: 20px; height: 2px;
+      background: var(--green);
+      border-radius: 2px;
+    }
+
+    h2 {
+      font-family: var(--display);
+      font-size: clamp(2.4rem, 4vw, 3.8rem);
+      line-height: 1.05;
+      letter-spacing: .03em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .section-sub {
+      font-size: 16px;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 520px;
+      font-weight: 300;
+    }
+
+    /* ─── HOW IT WORKS ────────────────────────────── */
+    #how { border-top: 1px solid var(--border); }
+
+    .how-header {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      align-items: end;
+      margin-bottom: 72px;
+    }
+
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+    }
+
+    .step-card {
+      background: var(--glass);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 36px 32px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color .3s, background .3s, transform .3s;
+      cursor: default;
+    }
+
+    .step-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 30% 20%, var(--green-gg) 0%, transparent 60%);
+      opacity: 0;
+      transition: opacity .4s;
+    }
+
+    .step-card:hover {
+      border-color: var(--border-g);
+      background: var(--glass-h);
+      transform: translateY(-4px);
+    }
+
+    .step-card:hover::before { opacity: 1; }
+
+    .step-num {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--green);
+      letter-spacing: .12em;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .step-num::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .step-icon {
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      background: var(--green-gg);
+      border: 1px solid var(--border-g);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      font-size: 22px;
+    }
+
+    .step-title {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 10px;
+      line-height: 1.3;
+    }
+
+    .step-body {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    /* ─── CAPABILITIES ────────────────────────────── */
+    #capabilities { border-top: 1px solid var(--border); }
+
+    .caps-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 64px;
+      align-items: center;
+    }
+
+    .caps-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .cap-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+      padding: 24px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: border-color .25s, background .25s;
+    }
+
+    .cap-item:hover,
+    .cap-item.active {
+      background: var(--glass);
+      border-color: var(--border);
+    }
+
+    .cap-item.active { border-color: var(--border-g); background: var(--green-gg); }
+
+    .cap-icon {
+      width: 44px; height: 44px;
+      border-radius: 10px;
+      background: var(--green-gg);
+      border: 1px solid var(--border-g);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 20px;
+      transition: background .25s;
+    }
+
+    .cap-item.active .cap-icon { background: rgba(94,163,76,.2); }
+
+    .cap-text-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .cap-text-body {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    /* Cap detail panel */
+    .cap-detail {
+      background: var(--glass);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 40px;
+      min-height: 360px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cap-detail::before {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 240px; height: 240px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--green-gg) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .cap-detail-tag {
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--green);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .cap-detail-title {
+      font-family: var(--display);
+      font-size: 2rem;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      line-height: 1.1;
+      margin-bottom: 16px;
+    }
+
+    .cap-detail-body {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.75;
+      flex: 1;
+    }
+
+    .cap-detail-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 28px;
+    }
+
+    .chip {
+      font-size: 11px;
+      font-family: var(--mono);
+      background: var(--green-gg);
+      border: 1px solid var(--border-g);
+      color: var(--green-l);
+      padding: 5px 12px;
+      border-radius: 6px;
+      letter-spacing: .04em;
+    }
+
+    /* ─── FOUNDER ─────────────────────────────────── */
+    #founder { border-top: 1px solid var(--border); }
+
+    .founder-layout {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 64px;
+      align-items: start;
+      max-width: 900px;
+    }
+
+    .founder-photo-wrap {
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .founder-photo {
+      width: 200px;
+      height: 240px;
+      object-fit: cover;
+      object-position: center top;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      display: block;
+      filter: grayscale(20%);
+    }
+
+    .founder-photo-accent {
+      position: absolute;
+      bottom: -12px;
+      left: -12px;
+      width: 80px; height: 80px;
+      border-radius: 10px;
+      background: var(--green-g);
+      border: 1px solid var(--border-g);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+    }
+
+    .founder-name {
+      font-family: var(--display);
+      font-size: 2.6rem;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      line-height: 1.05;
+      margin-bottom: 6px;
+    }
+
+    .founder-role {
+      font-size: 13px;
+      color: var(--green-l);
+      font-weight: 500;
+      letter-spacing: .04em;
+      margin-bottom: 28px;
+    }
+
+    .founder-quote {
+      font-size: 17px;
+      color: var(--text);
+      line-height: 1.75;
+      font-weight: 300;
+      border-left: 3px solid var(--green);
+      padding-left: 24px;
+      margin-bottom: 28px;
+    }
+
+    .founder-quote strong { font-weight: 600; }
+
+    .founder-creds {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .cred {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .04em;
+      background: var(--glass);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 6px 14px;
+      border-radius: 6px;
+    }
+
+    /* ─── BETA / WAITLIST ─────────────────────────── */
+    #beta { border-top: 1px solid var(--border); }
+
+    .beta-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: start;
+    }
+
+    .beta-left h2 { margin-bottom: 16px; }
+
+    .beta-perks {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-top: 32px;
+    }
+
+    .perk {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+
+    .perk-icon {
+      width: 28px; height: 28px;
+      border-radius: 8px;
+      background: var(--green-gg);
+      border: 1px solid var(--border-g);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+      font-size: 14px;
+    }
+
+    .perk-text {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .perk-text strong { color: var(--text); font-weight: 500; }
+
+    /* ─── WAITLIST FORM ───────────────────────────── */
+    .waitlist-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 40px;
+    }
+
+    .waitlist-card-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .waitlist-card-sub {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 28px;
+      line-height: 1.6;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .form-row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .form-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    .form-input,
+    .form-select {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 13px 16px;
+      font-family: var(--sans);
+      font-size: 14px;
+      width: 100%;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .form-input::placeholder { color: var(--muted2); }
+
+    .form-input:focus,
+    .form-select:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(94,163,76,.12);
+    }
+
+    .form-input.error,
+    .form-select.error {
+      border-color: var(--danger);
+      box-shadow: 0 0 0 3px rgba(224,92,92,.1);
+    }
+
+    .form-select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23666' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 38px;
+      cursor: pointer;
+    }
+
+    .form-select option { background: #111611; color: var(--text); }
+
+    /* Honeypot — hidden from humans, present for Netlify spam filter */
+    .form-honeypot { display: none; }
+
+    .form-error-msg {
+      font-size: 11px;
+      color: var(--danger);
+      min-height: 16px;
+    }
+
+    .btn-submit {
+      width: 100%;
+      background: var(--green);
+      color: #0b0e0b;
+      border: none;
+      border-radius: 10px;
+      padding: 16px;
+      font-family: var(--sans);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+      position: relative;
+      overflow: hidden;
+      transition: background .2s, transform .15s, box-shadow .2s, opacity .2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .btn-submit:hover {
+      background: var(--green-l);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(94,163,76,.3);
+    }
+
+    .btn-submit:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    .form-privacy {
+      font-size: 11px;
+      color: var(--muted2);
+      text-align: center;
+      margin-top: 14px;
+      line-height: 1.6;
+    }
+
+    /* Form status */
+    .form-status {
+      display: none;
+      border-radius: 12px;
+      padding: 20px 24px;
+      font-size: 14px;
+      line-height: 1.6;
+      margin-top: 16px;
+    }
+
+    .form-status.success {
+      background: rgba(94,163,76,.08);
+      border: 1px solid var(--border-g);
+      color: var(--green-l);
+    }
+
+    .form-status.failure {
+      background: rgba(224,92,92,.07);
+      border: 1px solid rgba(224,92,92,.25);
+      color: var(--danger);
+    }
+
+    .form-status.show { display: block; }
+
+    .form-status-title {
+      font-weight: 600;
+      font-size: 15px;
+      margin-bottom: 6px;
+    }
+
+    /* ─── PRIVACY / SPECS ─────────────────────────── */
+    #privacy { border-top: 1px solid var(--border); }
+
+    .privacy-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-top: 48px;
+    }
+
+    .privacy-card {
+      background: var(--glass);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      transition: border-color .25s, background .25s;
+    }
+
+    .privacy-card:hover {
+      border-color: var(--border-g);
+      background: var(--green-gg);
+    }
+
+    .privacy-icon {
+      font-size: 26px;
+      margin-bottom: 14px;
+      display: block;
+    }
+
+    .privacy-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .privacy-body {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    /* ─── FOOTER ──────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 48px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .footer-logo {
+      font-family: var(--display);
+      font-size: 18px;
+      letter-spacing: .06em;
+      color: var(--text);
+    }
+
+    .footer-logo span { color: var(--green-l); }
+
+    .footer-copy {
+      font-size: 12px;
+      color: var(--muted2);
+    }
+
+    /* ─── TOAST ───────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 28px; right: 28px;
+      background: var(--green);
+      color: #0b0e0b;
+      padding: 14px 22px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      z-index: 300;
+      box-shadow: 0 8px 32px rgba(94,163,76,.4);
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity .3s, transform .3s;
+      pointer-events: none;
+    }
+
+    .toast.show { opacity: 1; transform: none; }
+
+    /* ─── MOBILE ──────────────────────────────────── */
+    @media (max-width: 900px) {
+      nav { padding: 0 24px; }
+      .nav-center { display: none; }
+
+      .hero {
+        grid-template-columns: 1fr;
+        padding: 100px 24px 60px;
+        min-height: auto;
+      }
+
+      .hero-right { display: none; }
+
+      section { padding: 72px 24px; }
+
+      .how-header { grid-template-columns: 1fr; gap: 24px; margin-bottom: 40px; }
+
+      .steps-grid { grid-template-columns: 1fr; gap: 12px; }
+
+      .caps-layout { grid-template-columns: 1fr; gap: 40px; }
+
+      .founder-layout { grid-template-columns: 1fr; gap: 32px; }
+      .founder-photo { width: 120px; height: 140px; }
+      .founder-photo-accent { width: 52px; height: 52px; font-size: 20px; }
+
+      .beta-layout { grid-template-columns: 1fr; gap: 48px; }
+
+      .form-row-2 { grid-template-columns: 1fr; }
+
+      footer { flex-direction: column; text-align: center; padding: 28px 24px; }
+
+      .toast { right: 16px; left: 16px; bottom: 16px; text-align: center; }
+    }
+
+    @media (max-width: 480px) {
+      nav { padding: 0 16px; }
+      .hero { padding: 90px 16px 56px; }
+      section { padding: 56px 16px; }
+      .waitlist-card { padding: 28px 20px; }
+      h1 { font-size: clamp(3rem, 11vw, 4rem); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Ambient background layers -->
+<div class="bg-ambient" aria-hidden="true"></div>
+<div class="bg-grid" aria-hidden="true"></div>
+
+<!-- ─── NAV ───────────────────────────────────────── -->
+<nav id="mainNav">
+  <a class="nav-logo" href="#">
+    <div class="nav-logo-mark">
+      <!-- Simple pin/target icon in green -->
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="10" r="3.5" fill="none" stroke="#0b0e0b" stroke-width="2"/>
+        <circle cx="12" cy="10" r="1" fill="#0b0e0b"/>
+        <path d="M12 13.5V21M9 21h6" stroke="#0b0e0b" stroke-width="2" stroke-linecap="round" fill="none"/>
+        <path d="M12 3V6.5" stroke="#0b0e0b" stroke-width="2" stroke-linecap="round" fill="none"/>
+        <path d="M3 10H6.5M17.5 10H21" stroke="#0b0e0b" stroke-width="2" stroke-linecap="round" fill="none"/>
+      </svg>
+    </div>
+    <span class="nav-logo-text">Golf<span>Lie</span></span>
+  </a>
+
+  <ul class="nav-center">
+    <li><a href="#how">How It Works</a></li>
+    <li><a href="#capabilities">Technology</a></li>
+    <li><a href="#founder">Founder</a></li>
+  </ul>
+
+  <a class="btn-nav" href="#beta">Join Beta</a>
+</nav>
+
+<!-- ─── HERO ──────────────────────────────────────── -->
+<section class="hero" id="home">
+  <div class="hero-left">
+
+    <div class="hero-badge reveal">
+      <div class="hero-badge-dot"></div>
+      <span class="hero-badge-text">Beta Access Open — 500 Spots</span>
+    </div>
+
+    <h1 class="reveal reveal-d1">
+      Read Every Lie.
+      <em>Hit Every Shot.</em>
+    </h1>
+
+    <p class="hero-sub reveal reveal-d2">
+      Point your phone at the ball. GLA reads the <strong>turf conditions, lie angle, and grass density</strong> in seconds — then tells you exactly how it will affect your shot.
+    </p>
+
+    <div class="hero-actions reveal reveal-d3">
+      <a class="btn-primary" href="#beta" id="heroCta">
+        Get Early Access
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+      <a class="btn-ghost" href="#how">
+        See how it works
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+    </div>
+
+    <div class="hero-stats reveal reveal-d4">
+      <div class="stat-pill">
+        <span class="stat-val">13</span>
+        <span class="stat-lbl">Lie Classes</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-val">&lt;1s</span>
+        <span class="stat-lbl">Analysis Time</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-val">iOS + Android</span>
+        <span class="stat-lbl">Platforms</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- App mockup — hidden on mobile -->
+  <div class="hero-right reveal reveal-d2">
+    <div class="app-mockup">
+      <div class="mockup-header">
+        <span class="mockup-title">Lie Analysis</span>
+        <span class="mockup-badge">ANALYZING</span>
+      </div>
+      <div class="mockup-image-area">
+        <div class="mockup-turf"></div>
+        <div class="mockup-scan"></div>
+        <div class="mockup-overlay-box"></div>
+        <span class="mockup-lie-label">Fairway Rough</span>
+        <span class="mockup-conf">94% conf.</span>
+      </div>
+      <div class="mockup-body">
+        <div class="mockup-row">
+          <span class="mockup-row-label">Lie Type</span>
+          <span class="mockup-row-val green">Fairway Rough</span>
+        </div>
+        <div class="mockup-row">
+          <span class="mockup-row-label">Grass Density</span>
+          <span class="mockup-row-val">Medium</span>
+        </div>
+        <div class="mockup-row">
+          <span class="mockup-row-label">Lie Angle</span>
+          <span class="mockup-row-val">−4°</span>
+        </div>
+        <div class="mockup-divider"></div>
+        <div class="mockup-row">
+          <span class="mockup-row-label">Launch Variance</span>
+          <span class="mockup-row-val gold">+2.1°</span>
+        </div>
+        <div class="mockup-rec">
+          <div class="mockup-rec-label">Recommendation</div>
+          Club down one. Expect lower flight and reduced spin. Play the ball slightly back.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── HOW IT WORKS ───────────────────────────────── -->
+<section id="how">
+  <div class="how-header">
+    <div>
+      <div class="section-eyebrow reveal">How It Works</div>
+      <h2 class="reveal reveal-d1">Three seconds.<br>Total clarity.</h2>
+    </div>
+    <p class="section-sub reveal reveal-d2">
+      No gadgets. No guesswork. Just point your camera and get shot-shaping data that used to require a launch monitor.
+    </p>
+  </div>
+
+  <div class="steps-grid">
+    <div class="step-card reveal">
+      <div class="step-num">Step 01</div>
+      <div class="step-icon">📷</div>
+      <div class="step-title">Aim at the ball</div>
+      <p class="step-body">Open the app and frame your ball in the lie. No special setup — just your phone camera pointing at the ground.</p>
+    </div>
+    <div class="step-card reveal reveal-d1">
+      <div class="step-num">Step 02</div>
+      <div class="step-icon">🧠</div>
+      <div class="step-title">AI reads the lie</div>
+      <p class="step-body">Our computer vision model classifies the turf type, grass density, lie angle, and slope in under a second.</p>
+    </div>
+    <div class="step-card reveal reveal-d2">
+      <div class="step-num">Step 03</div>
+      <div class="step-icon">🎯</div>
+      <div class="step-title">Get your shot plan</div>
+      <p class="step-body">Receive a clear club recommendation with expected launch variance, spin change, and ball flight adjustment.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ─── CAPABILITIES ───────────────────────────────── -->
+<section id="capabilities">
+  <div class="caps-layout">
+
+    <div>
+      <div class="section-eyebrow reveal">The Technology</div>
+      <h2 class="reveal reveal-d1">Built to be<br>accurate.</h2>
+      <p class="section-sub reveal reveal-d2" style="margin-bottom:40px;">
+        Every component of GLA is optimized for the specific challenge of reading a golf lie in real-world conditions.
+      </p>
+
+      <div class="caps-list reveal reveal-d3" id="capsList">
+        <div class="cap-item active" data-cap="0">
+          <div class="cap-icon">👁️</div>
+          <div>
+            <div class="cap-text-title">Computer Vision Model</div>
+            <p class="cap-text-body">MobileNetV3Small — fast, precise, purpose-built for turf.</p>
+          </div>
+        </div>
+        <div class="cap-item" data-cap="1">
+          <div class="cap-icon">⚡</div>
+          <div>
+            <div class="cap-text-title">Fast Inference</div>
+            <p class="cap-text-body">Server-side processing returns results in under a second.</p>
+          </div>
+        </div>
+        <div class="cap-item" data-cap="2">
+          <div class="cap-icon">📐</div>
+          <div>
+            <div class="cap-text-title">Physics Engine</div>
+            <p class="cap-text-body">Real launch angle and spin decay calculations from turf data.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cap-detail reveal reveal-d2" id="capDetail">
+      <div>
+        <div class="cap-detail-tag" id="capTag">MODEL // 01</div>
+        <div class="cap-detail-title" id="capTitle">Computer<br>Vision</div>
+        <p class="cap-detail-body" id="capBody">
+          GLA uses a MobileNetV3Small architecture — a lean, high-efficiency 13-class TFLite model trained on a proprietary dataset of complex lie interactions captured across real course conditions. It classifies everything from tight fairway to gnarly rough to bunker faces, optimized for speed and accuracy on every shot.
+        </p>
+      </div>
+      <div class="cap-detail-chips" id="capChips">
+        <span class="chip">MobileNetV3Small</span>
+        <span class="chip">13 Lie Classes</span>
+        <span class="chip">TFLite</span>
+        <span class="chip">Proprietary Dataset</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ─── FOUNDER ─────────────────────────────────────── -->
+<section id="founder">
+  <div class="founder-layout">
+    <div class="founder-photo-wrap reveal">
+      <img
+        class="founder-photo"
+        src="https://lieanalyzer.com/johnny_headshot.png"
+        alt="Johnny — Founder, Golf Lie Analyzer"
+      />
+      <div class="founder-photo-accent">⛳</div>
+    </div>
+
+    <div class="reveal reveal-d1">
+      <div class="section-eyebrow">The Founder</div>
+      <div class="founder-name">Johnny<br>Barnachia</div>
+      <div class="founder-role">Solo Founder &amp; Builder</div>
+      <blockquote class="founder-quote">
+        "I've spent my career solving complex problems where <strong>data-driven decisions matter</strong>. GLA was built because I wanted that same level of precision applied to the most frustrating moment in golf — staring at a bad lie with no idea what it's really going to do to your shot."
+      </blockquote>
+      <div class="founder-creds">
+        <span class="cred">MBA</span>
+        <span class="cred">PMP®</span>
+        <span class="cred">LSSBB</span>
+        <span class="cred">20+ Years Tech Leadership</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── BETA / WAITLIST ─────────────────────────────── -->
+<section id="beta">
+  <div class="beta-layout">
+    <div class="beta-left">
+      <div class="section-eyebrow reveal">Early Access</div>
+      <h2 class="reveal reveal-d1">Be in the<br>first 500.</h2>
+      <p class="section-sub reveal reveal-d2">
+        Validation Phase 1 is live. We're onboarding a limited group of golfers to train and refine the model with real-world shot data.
+      </p>
+
+      <div class="beta-perks reveal reveal-d3">
+        <div class="perk">
+          <div class="perk-icon">🚀</div>
+          <p class="perk-text"><strong>First access</strong> when the app launches on iOS and Android.</p>
+        </div>
+        <div class="perk">
+          <div class="perk-icon">🎤</div>
+          <p class="perk-text"><strong>Direct input</strong> on features, model classes, and shot recommendations.</p>
+        </div>
+        <div class="perk">
+          <div class="perk-icon">📊</div>
+          <p class="perk-text"><strong>Beta updates</strong> on model accuracy improvements and new lie types.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Netlify Form -->
+    <div class="waitlist-card reveal reveal-d2">
+      <div class="waitlist-card-title">Request Beta Access</div>
+      <div class="waitlist-card-sub">Free. No credit card. Cancel anytime.</div>
+
+      <!--
+        data-netlify="true"      → Netlify intercepts this form
+        netlify-honeypot          → spam trap field
+        action="/waitlist-success"→ fallback redirect (non-JS)
+        JS below handles async submit so the page never reloads
+      -->
+      <form
+        id="waitlistForm"
+        name="gla-waitlist"
+        method="POST"
+        data-netlify="true"
+        netlify-honeypot="bot-field"
+        action="/waitlist-success"
+        novalidate
+      >
+        <!-- Required hidden field for Netlify -->
+        <input type="hidden" name="form-name" value="gla-waitlist" />
+
+        <!-- Honeypot — visible in DOM, hidden via CSS -->
+        <div class="form-honeypot">
+          <label>Skip this: <input name="bot-field" tabindex="-1" autocomplete="off" /></label>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label class="form-label" for="firstName">First Name</label>
+            <input class="form-input" type="text" id="firstName" name="first-name" placeholder="Jordan" autocomplete="given-name" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="lastName">Last Name</label>
+            <input class="form-input" type="text" id="lastName" name="last-name" placeholder="Smith" autocomplete="family-name" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="email">Email Address *</label>
+          <input class="form-input" type="email" id="email" name="email" placeholder="you@email.com" autocomplete="email" required />
+          <span class="form-error-msg" id="emailErr"></span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="device">Your Device</label>
+          <select class="form-select" id="device" name="device">
+            <option value="" disabled selected>Select your platform</option>
+            <option value="ios">iPhone (iOS)</option>
+            <option value="android">Android</option>
+            <option value="both">Both</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="handicap">Handicap Index <span style="font-weight:400;text-transform:none;color:var(--muted2)">(optional)</span></label>
+          <input class="form-input" type="text" id="handicap" name="handicap" placeholder="e.g. 12 or scratch" />
+        </div>
+
+        <button type="submit" class="btn-submit" id="submitBtn">
+          <span id="submitLabel">Get Early Access</span>
+          <svg id="submitArrow" width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+
+        <p class="form-privacy">No spam. Your data is used only for beta access. Unsubscribe anytime.</p>
+      </form>
+
+      <div class="form-status success" id="formSuccess">
+        <div class="form-status-title">🎉 You're on the list!</div>
+        You'll hear from us when your beta slot opens. Keep an eye on your inbox.
+      </div>
+
+      <div class="form-status failure" id="formFailure">
+        <div class="form-status-title">Something went wrong.</div>
+        Check your connection and try again. Or email us at access@lieanalyzer.com.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── PRIVACY ─────────────────────────────────────── -->
+<section id="privacy">
+  <div class="section-eyebrow reveal">Privacy First</div>
+  <h2 class="reveal reveal-d1">Your images stay yours.</h2>
+  <p class="section-sub reveal reveal-d2">We built GLA so you never have to wonder what happens to your data.</p>
+
+  <div class="privacy-grid">
+    <div class="privacy-card reveal">
+      <span class="privacy-icon">🔒</span>
+      <div class="privacy-title">Encrypted in Transit</div>
+      <p class="privacy-body">Every image is transmitted over encrypted channels to our inference server. Nothing travels in the clear.</p>
+    </div>
+    <div class="privacy-card reveal reveal-d1">
+      <span class="privacy-icon">🗑️</span>
+      <div class="privacy-title">Zero Retention</div>
+      <p class="privacy-body">Images are analyzed in-process and discarded immediately. We don't store your shots, build profiles, or log your rounds.</p>
+    </div>
+    <div class="privacy-card reveal reveal-d2">
+      <span class="privacy-icon">🚫</span>
+      <div class="privacy-title">No Training on Your Data</div>
+      <p class="privacy-body">Your shots are never used to train the model without explicit opt-in consent. Your game is private.</p>
+    </div>
+    <div class="privacy-card reveal reveal-d3">
+      <span class="privacy-icon">📵</span>
+      <div class="privacy-title">No Third-Party Sharing</div>
+      <p class="privacy-body">We don't sell or share your data with advertisers, analytics platforms, or anyone else. Full stop.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FOOTER ──────────────────────────────────────── -->
+<footer>
+  <span class="footer-logo">Golf<span>Lie</span> Analyzer</span>
+  <span class="footer-copy">© 2025 Golf Lie Analyzer. All rights reserved.</span>
+</footer>
+
+<!-- Toast (shown if arriving from ?joined=true fallback) -->
+<div class="toast" id="toast" role="status" aria-live="polite">
+  🎉 You're on the list — we'll be in touch!
+</div>
+
+<!-- ─── JS ─────────────────────────────────────────── -->
+<script>
+  /* ── Nav scroll state ─────────────────────────────── */
+  const nav = document.getElementById('mainNav');
+  const navLinks = nav.querySelectorAll('.nav-center a');
+
+  window.addEventListener('scroll', () => {
+    nav.classList.toggle('scrolled', window.scrollY > 40);
+    // Active section tracking
+    const sections = ['home','how','capabilities','founder','beta','privacy'];
+    let current = 'home';
+    for (const id of sections) {
+      const el = document.getElementById(id);
+      if (el && window.scrollY >= el.offsetTop - 120) current = id;
+    }
+    navLinks.forEach(a => {
+      const href = a.getAttribute('href').replace('#','');
+      a.classList.toggle('active', href === current);
+    });
+  }, { passive: true });
+
+  /* ── Scroll reveal ─────────────────────────────────── */
+  const revealObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        revealObs.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12 });
+
+  document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
+
+  /* ── Ripple effect on primary buttons ──────────────── */
+  document.querySelectorAll('.btn-primary, .btn-submit, .btn-nav').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      const r = document.createElement('span');
+      r.className = 'ripple';
+      const rect = this.getBoundingClientRect();
+      r.style.left = (e.clientX - rect.left - 5) + 'px';
+      r.style.top  = (e.clientY - rect.top  - 5) + 'px';
+      this.appendChild(r);
+      setTimeout(() => r.remove(), 600);
+    });
+  });
+
+  /* ── Capabilities tab switcher ─────────────────────── */
+  const capData = [
+    {
+      tag:    'MODEL // 01',
+      title:  'Computer<br>Vision',
+      body:   'GLA uses a MobileNetV3Small architecture — a lean, high-efficiency 13-class TFLite model trained on a proprietary dataset of complex lie interactions captured across real course conditions. It classifies everything from tight fairway to gnarly rough to bunker faces, optimized for speed and accuracy on every shot.',
+      chips:  ['MobileNetV3Small', '13 Lie Classes', 'TFLite', 'Proprietary Dataset']
+    },
+    {
+      tag:    'ENGINE // 02',
+      title:  'Fast<br>Inference',
+      body:   'Analysis runs on hardened server infrastructure via GCP Cloud Run. Images are transmitted encrypted, processed immediately, and the result returns in under a second. No image is written to disk — privacy-first by architecture, not just by policy.',
+      chips:  ['GCP Cloud Run', 'Sub-second Results', 'Encrypted Transit', 'Zero Retention']
+    },
+    {
+      tag:    'PHYSICS // 03',
+      title:  'Shot<br>Physics',
+      body:   'The physics engine translates raw lie classification into actionable shot data. Launch angle variance, spin decay, and expected ball flight changes are calculated from turf density, lie angle, and grass classification — so you get a real recommendation, not just a lie label.',
+      chips:  ['Launch Angle Variance', 'Spin Decay Model', 'Grass Density', 'Real Recommendations']
+    }
+  ];
+
+  const capItems   = document.querySelectorAll('.cap-item');
+  const capTag     = document.getElementById('capTag');
+  const capTitle   = document.getElementById('capTitle');
+  const capBody    = document.getElementById('capBody');
+  const capChips   = document.getElementById('capChips');
+
+  function switchCap(idx) {
+    capItems.forEach(i => i.classList.remove('active'));
+    capItems[idx].classList.add('active');
+    const d = capData[idx];
+    capTag.textContent    = d.tag;
+    capTitle.innerHTML    = d.title;
+    capBody.textContent   = d.body;
+    capChips.innerHTML    = d.chips.map(c => `<span class="chip">${c}</span>`).join('');
+  }
+
+  capItems.forEach((item, idx) => {
+    item.addEventListener('click', () => switchCap(idx));
+  });
+
+  /* ── Waitlist form: async Netlify submit ───────────── */
+  const form       = document.getElementById('waitlistForm');
+  const submitBtn  = document.getElementById('submitBtn');
+  const submitLbl  = document.getElementById('submitLabel');
+  const submitArrow= document.getElementById('submitArrow');
+  const successEl  = document.getElementById('formSuccess');
+  const failureEl  = document.getElementById('formFailure');
+
+  function encodeForm(data) {
+    return Object.keys(data)
+      .map(k => encodeURIComponent(k) + '=' + encodeURIComponent(data[k]))
+      .join('&');
+  }
+
+  function clearErrors() {
+    document.querySelectorAll('.form-error-msg').forEach(el => el.textContent = '');
+    document.querySelectorAll('.form-input, .form-select').forEach(el => el.classList.remove('error'));
+  }
+
+  function validate() {
+    let valid = true;
+    const emailInput = document.getElementById('email');
+    const val = emailInput.value.trim();
+    if (!val) {
+      document.getElementById('emailErr').textContent = 'Email address is required.';
+      emailInput.classList.add('error');
+      valid = false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+      document.getElementById('emailErr').textContent = 'Please enter a valid email address.';
+      emailInput.classList.add('error');
+      valid = false;
+    }
+    return valid;
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearErrors();
+    if (!validate()) return;
+
+    submitBtn.disabled   = true;
+    submitLbl.textContent = 'Submitting…';
+    submitArrow.style.display = 'none';
+
+    const payload = {
+      'form-name':  'gla-waitlist',
+      'first-name': document.getElementById('firstName').value.trim(),
+      'last-name':  document.getElementById('lastName').value.trim(),
+      'email':      document.getElementById('email').value.trim(),
+      'device':     document.getElementById('device').value,
+      'handicap':   document.getElementById('handicap').value.trim(),
+    };
+
+    try {
+      const res = await fetch('/', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body:    encodeForm(payload),
+      });
+      if (res.ok) {
+        form.style.display = 'none';
+        successEl.classList.add('show');
+        successEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      } else {
+        throw new Error('non-ok');
+      }
+    } catch {
+      submitBtn.disabled    = false;
+      submitLbl.textContent = 'Get Early Access';
+      submitArrow.style.display = '';
+      failureEl.classList.add('show');
+    }
+  });
+
+  /* ── Toast: ?joined=true param ─────────────────────── */
+  (() => {
+    if (new URLSearchParams(window.location.search).get('joined') === 'true') {
+      const toast = document.getElementById('toast');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 5000);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  })();
+
+  /* ── Counter animation on stat pills ───────────────── */
+  const stats = document.querySelectorAll('.stat-val');
+  const countObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      const el = e.target;
+      const target = el.textContent;
+      // Only animate pure numbers
+      if (/^\d+$/.test(target)) {
+        const end = parseInt(target);
+        let start = 0;
+        const step = Math.ceil(end / 30);
+        const timer = setInterval(() => {
+          start = Math.min(start + step, end);
+          el.textContent = start;
+          if (start >= end) clearInterval(timer);
+        }, 40);
+      }
+      countObs.unobserve(el);
+    });
+  }, { threshold: 0.5 });
+
+  stats.forEach(s => countObs.observe(s));
+</script>
+
+</body>
+</html>
