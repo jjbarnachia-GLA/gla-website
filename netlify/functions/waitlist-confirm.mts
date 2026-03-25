@@ -113,7 +113,7 @@ export default async (req: Request, context: Context) => {
 
   // ── 1. Confirmation → user ────────────────────────────────────────────────
   const userEmail = {
-    from: "GLA Neural <noreply@lieanalyzer.com>",
+    from: "GLA Neural <onboarding@resend.dev>",
     to: [email],
     subject: "You're on the GLA beta waitlist.",
     html: `<!DOCTYPE html><html>
@@ -184,7 +184,7 @@ export default async (req: Request, context: Context) => {
 
   // ── 2. Ops alert → gla.dataclaw@gmail.com ────────────────────────────────
   const opsAlert = {
-    from: "GLA Waitlist <noreply@lieanalyzer.com>",
+    from: "GLA Waitlist <onboarding@resend.dev>",
     to: [NOTIFY_EMAIL],
     subject: `[GLA] New beta signup: ${email}`,
     html: `<body style="font-family:'Courier New',monospace;background:#050a0e;padding:24px;">
@@ -223,7 +223,7 @@ export default async (req: Request, context: Context) => {
 
   // ── 3. Press alert → founder (only if press domain detected) ─────────────
   const pressPayload = pressAlert ? {
-    from: "GLA Waitlist <noreply@lieanalyzer.com>",
+    from: "GLA Waitlist <onboarding@resend.dev>",
     to: [FOUNDER_EMAIL],
     subject: `🚨 [GLA] Possible press signup: ${email}`,
     html: `<body style="font-family:'Courier New',monospace;background:#050a0e;padding:24px;">
